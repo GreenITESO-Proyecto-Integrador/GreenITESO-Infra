@@ -96,6 +96,7 @@ port=$staging_port
 dbname=neondb
 user=neondb_owner
 password=$staging_owner_password
+connect_timeout=5
 
 [staging_app]
 host=127.0.0.1
@@ -103,6 +104,7 @@ port=$staging_port
 dbname=neondb
 user=greeniteso_staging_app
 password=$staging_app_password
+connect_timeout=5
 
 [staging_migrator]
 host=127.0.0.1
@@ -110,6 +112,7 @@ port=$staging_port
 dbname=neondb
 user=greeniteso_staging_migrator
 password=$staging_migrator_password
+connect_timeout=5
 
 [production_owner]
 host=127.0.0.1
@@ -117,6 +120,7 @@ port=$production_port
 dbname=neondb
 user=neondb_owner
 password=$production_owner_password
+connect_timeout=5
 
 [production_app]
 host=127.0.0.1
@@ -124,6 +128,7 @@ port=$production_port
 dbname=neondb
 user=greeniteso_production_app
 password=$production_app_password
+connect_timeout=5
 
 [production_migrator]
 host=127.0.0.1
@@ -131,6 +136,7 @@ port=$production_port
 dbname=neondb
 user=greeniteso_production_migrator
 password=$production_migrator_password
+connect_timeout=5
 
 [staging_app_wrong_password]
 host=127.0.0.1
@@ -138,6 +144,7 @@ port=$staging_port
 dbname=neondb
 user=greeniteso_staging_app
 password=$staging_wrong_password
+connect_timeout=5
 
 [staging_app_on_production]
 host=127.0.0.1
@@ -145,6 +152,7 @@ port=$production_port
 dbname=neondb
 user=greeniteso_staging_app
 password=$staging_app_password
+connect_timeout=5
 EOF
 chmod 600 "$service_file"
 
@@ -183,12 +191,24 @@ staging_app_user=$(PGSERVICEFILE="$service_file" "$psql_bin" -X service=staging_
   'SELECT current_user;')
 staging_migrator_user=$(PGSERVICEFILE="$service_file" "$psql_bin" -X service=staging_migrator -Atqc \
   'SELECT current_user;')
+production_app_user=$(PGSERVICEFILE="$service_file" "$psql_bin" -X service=production_app -Atqc \
+  'SELECT current_user;')
+production_migrator_user=$(PGSERVICEFILE="$service_file" "$psql_bin" -X service=production_migrator -Atqc \
+  'SELECT current_user;')
 [[ $staging_app_user == greeniteso_staging_app ]] || {
   printf 'FAIL: SCRAM app authentication returned unexpected role (%s)\n' "$staging_app_user" >&2
   exit 1
 }
 [[ $staging_migrator_user == greeniteso_staging_migrator ]] || {
   printf 'FAIL: SCRAM migrator authentication returned unexpected role (%s)\n' "$staging_migrator_user" >&2
+  exit 1
+}
+[[ $production_app_user == greeniteso_production_app ]] || {
+  printf 'FAIL: SCRAM production app authentication returned unexpected role (%s)\n' "$production_app_user" >&2
+  exit 1
+}
+[[ $production_migrator_user == greeniteso_production_migrator ]] || {
+  printf 'FAIL: SCRAM production migrator authentication returned unexpected role (%s)\n' "$production_migrator_user" >&2
   exit 1
 }
 
@@ -201,14 +221,28 @@ if PGSERVICEFILE="$service_file" "$psql_bin" -X service=staging_app -v ON_ERROR_
   printf '%s\n' 'FAIL: SCRAM app role executed DDL' >&2
   exit 1
 fi
+wrong_password_stderr="$temp_dir/wrong-password.stderr"
+: >"$wrong_password_stderr"
+chmod 600 "$wrong_password_stderr"
 if PGSERVICEFILE="$service_file" "$psql_bin" -X service=staging_app_wrong_password \
-  -c 'SELECT 1;' >/dev/null 2>&1; then
+  -c 'SELECT 1;' > /dev/null 2>"$wrong_password_stderr"; then
   printf '%s\n' 'FAIL: SCRAM authentication accepted a wrong password' >&2
   exit 1
 fi
+if ! grep -Fq 'password authentication failed' "$wrong_password_stderr"; then
+  printf '%s\n' 'FAIL: wrong-password check did not reach PostgreSQL authentication' >&2
+  exit 1
+fi
+cross_environment_stderr="$temp_dir/cross-environment.stderr"
+: >"$cross_environment_stderr"
+chmod 600 "$cross_environment_stderr"
 if PGSERVICEFILE="$service_file" "$psql_bin" -X service=staging_app_on_production \
-  -c 'SELECT 1;' >/dev/null 2>&1; then
+  -c 'SELECT 1;' > /dev/null 2>"$cross_environment_stderr"; then
   printf '%s\n' 'FAIL: staging SCRAM credential authenticated on production fixture' >&2
+  exit 1
+fi
+if ! grep -Fq 'password authentication failed' "$cross_environment_stderr"; then
+  printf '%s\n' 'FAIL: cross-environment check did not reach PostgreSQL authentication' >&2
   exit 1
 fi
 
