@@ -42,3 +42,16 @@ terraform.rc
 # Optional: ignore plan files saved before destroying Terraform configuration
 # Uncomment the line below if you want to ignore planout files.
 # planout
+.neon
+
+# Neon authentication and local environment files (never commit credentials).
+.neon.*
+.env
+.env.*
+!.env.example
+.config/neon/
+credentials.json
+credentials.*.json
+node_modules/
+npm-debug.log*
+.DS_Store
