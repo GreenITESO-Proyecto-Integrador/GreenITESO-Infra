@@ -7,14 +7,16 @@ haya ejecutado.
 
 ## Roles y límites
 
-- Operador primario: responsable de Infra (asignar antes de la prueba).
+- Operador primario: Fernando Ramos (`luci-efe`); suplente pendiente.
 - Revisor: Backend verifica conteos, claves foráneas y atribución histórica.
 - Aprobador: responsable del ambiente decide si se puede cambiar tráfico.
 - La restauración de PostgreSQL no recupera cuentas de Firebase ni objetos de
   GCS; esos proveedores tienen sus propios procedimientos.
 
-La ventana de historial y el plan se deben copiar de la consola de la cuenta
-el día de la prueba. No se debe prometer una retención fija del free tier.
+El inventario verificado el 2026-09-10 registra Free y 21,600 segundos
+(6 horas), sujetos al límite de cambios del plan; consulta [cuotas](neon-cuotas.md).
+Vuelve a verificar la ventana visible el día de la prueba. Esta ventana corta
+no garantiza recuperación de un incidente descubierto al día siguiente.
 Una rama creada desde el estado actual no demuestra recuperación a un instante
 anterior; el ejercicio debe seleccionar un punto de tiempo dentro de la
 ventana visible.
@@ -23,12 +25,14 @@ ventana visible.
 
 1. Confirma por escrito el proyecto, la rama fuente y el instante UTC. Nunca
    uses `production` como destino de escritura.
-2. En `staging` crea una fila sintética identificable y registra el conteo y
-   el resultado de la consulta de integridad. Si el dataset de Backend aún no
+2. En `dev`, coordina una ventana con los tres equipos. Usa el dataset sintético
+   aprobado para desarrollo y registra conteos, integridad y un instante UTC
+   posterior a su confirmación (punto T). Si el dataset de Backend aún no
    existe, detén la prueba y registra el bloqueo.
-3. Espera a que la escritura esté confirmada. Guarda únicamente un
-   identificador sintético, el timestamp UTC y conteos; no guardes URLs con
-   contraseña, tokens, fotos o datos personales.
+3. Después de T, agrega una marca sintética adicional identificable y confirma
+   la transacción. La restauración a T debe conservar los datos previos y no
+   contener esta marca posterior. Registra únicamente IDs sintéticos, tiempos
+   UTC y conteos; nunca credenciales, fotos ni datos personales.
 4. En Neon Console crea una rama nueva desde el punto de tiempo anterior,
    seleccionando *Branches → New branch → Time*. Nómbrala, por ejemplo,
    `recovery-check-YYYYMMDD`, con expiración corta. La consola muestra la
@@ -42,7 +46,7 @@ ventana visible.
    suministrado por Backend. Debe comprobar: migraciones esperadas, conteos de
    tablas, claves foráneas, un `ActionLog` aprobado/pending/rejected, la
    atribución a clanes congelada y la suma de puntos histórica.
-7. Guarda en `docs/evidence/` (o en el issue privado de operaciones) el
+7. Guarda en `docs/evidence/` (o en el ticket de operaciones, solo metadatos aptos para publicación) el
    timestamp, branch ID, duración, resultado y el hash de la consulta/script.
    No guardes la cadena de conexión.
 8. Elimina la rama desechable cuando el operador y el revisor hayan aceptado
@@ -69,7 +73,7 @@ usar datos reales.
 
 | Evidencia | Estado |
 | --- | --- |
-| Capacidades/retención copiadas de la cuenta | Pendiente de revisión con acceso a Neon |
+| Capacidades/retención copiadas de la cuenta | Inventario T1/T6 disponible; reconfirmar al ejecutar |
 | Rama desechable desde un instante histórico | Pendiente; no ejecutar sobre production |
 | Conteos, FK y atribución histórica validados | Pendiente de comando de Backend/T9a |
 | RPO/RTO, operador y reconnect documentados | Pendiente de la prueba |

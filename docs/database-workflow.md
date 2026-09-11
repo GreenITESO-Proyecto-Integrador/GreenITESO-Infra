@@ -22,7 +22,7 @@ Cada desarrollador clona Backend y levanta una base local aislada. No se
 necesita login, API key ni CLI de Neon.
 
 ```sh
-git clone <URL_DEL_BACKEND>
+git clone https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend.git
 cd GreenITESO-Backend
 cp .env.example .env                 # obligatorio; no se commitea
 make compose-up
@@ -48,8 +48,8 @@ restricciones que usa el motor de puntos.
 El usuario personalizado debe estar decidido antes de la primera migración.
 Todo modelo que referencia otro dominio usa `settings.AUTH_USER_MODEL` o una
 dependencia de migración explícita. P3, P8, P9, P10 y P11 continúan pendientes
-de ratificación; una propuesta no se convierte en una columna o regla sin la
-decisión registrada.
+de ratificación; las implementaciones exploratorias permanecen en borradores, sin fusionarse
+ni aplicarse a ambientes compartidos hasta registrar la decisión.
 
 ## Crear y revisar una migración
 
