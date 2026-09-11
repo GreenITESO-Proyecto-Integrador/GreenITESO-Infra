@@ -124,3 +124,5 @@ ya reprodujo el conflicto sobre PostgreSQL 18, ejecutó el merge limpio y
 conservó las dos filas de datos resultantes. La comunicación y revisión con
 los equipos aún está pendiente; la evidencia no autoriza por sí sola una
 migración en un ambiente compartido.
+
+Guía introductoria publicada en el [wiki de Backend](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/wiki/Desarrollo-con-PostgreSQL-y-Neon). La comunicación a los tres equipos sigue pendiente.

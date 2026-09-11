@@ -252,3 +252,7 @@ pertenece al job migrator y a operaciones de respaldo.
   requieren el responsable de Cloud; no se ejecutó ninguna mutación GCP.
 - [ ] T5/T15: migrations Django y smoke test del servicio aún requieren el
   esquema/backend y una ventana de staging aprobada.
+
+## Evidencia cloud parcial
+
+[Roles aplicados y verificados en tres ambientes](evidence/neon-roles-2026-09-11.md). Credenciales iniciales, Secret Manager y autenticación cruzada siguen pendientes; no se aplicó el esquema de dominio.
