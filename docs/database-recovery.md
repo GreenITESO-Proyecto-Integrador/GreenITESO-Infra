@@ -43,7 +43,7 @@ ventana visible.
    imprime ni se escribe en el runbook.
 
 6. Con una credencial temporal de lectura, ejecuta el comando de verificación
-   suministrado por Backend. Debe comprobar: migraciones esperadas, conteos de
+   suministrado por Backend ([PR34, verificador y uso](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/pull/34)). `db_recovery_verify --write-baseline` captura evidencia antes de T y `--baseline` la compara en la rama restaurada. Debe comprobar: migraciones esperadas, conteos de
    tablas, claves foráneas, un `ActionLog` aprobado/pending/rejected, la
    atribución a clanes congelada y la suma de puntos histórica.
 7. Guarda en `docs/evidence/` (o en el ticket de operaciones, solo metadatos aptos para publicación) el
@@ -75,5 +75,5 @@ usar datos reales.
 | --- | --- |
 | Capacidades/retención copiadas de la cuenta | Inventario T1/T6 disponible; reconfirmar al ejecutar |
 | Rama desechable desde un instante histórico | Pendiente; no ejecutar sobre production |
-| Conteos, FK y atribución histórica validados | Pendiente de comando de Backend/T9a |
+| Conteos, FK y atribución histórica validados | Verificador preparado en Backend PR34; ejecución histórica pendiente de T9a/dataset aprobado |
 | RPO/RTO, operador y reconnect documentados | Pendiente de la prueba |
