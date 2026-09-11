@@ -187,17 +187,35 @@ prueba:
 - rechazo del wrapper cuando host/puerto apuntan a otro ambiente o cuando se
   intenta usar `hostaddr` desde el servicio o el entorno.
 
+La prueba separada
+[`scripts/test-neon-roles-scram-local.sh`](../scripts/test-neon-roles-scram-local.sh)
+levanta otros dos PostgreSQL 18 desechables con `scram-sha-256`, genera
+contraseñas distintas para app y migrator en archivos temporales 0600, y
+comprueba autenticación real de ambos, DML del app sobre una tabla del
+migrator, rechazo de DDL, contraseña incorrecta y aislamiento de la credencial
+staging frente al catálogo production. Esto demuestra el mecanismo local de
+contraseña; no certifica todavía la autenticación de los tres endpoints Neon.
+
 Con Docker/Colima y un cliente `psql` 18 instalado:
 
 ```bash
 PATH=/opt/homebrew/opt/libpq/bin:$PATH \
   scripts/test-neon-roles-local.sh
+
+PATH=/opt/homebrew/opt/libpq/bin:$PATH \
+  scripts/test-neon-roles-scram-local.sh
 ```
 
 Resultado observado el 2026-09-11:
 
 ```text
 PASS: PG18 roles, DML, DDL denial, default privileges, owner preservation, role/catalog isolation, admin/database guards, and target binding (password auth remains a cloud check).
+```
+
+La prueba SCRAM local produjo:
+
+```text
+PASS: PG18 SCRAM authentication, distinct app/migrator passwords, DML, DDL denial, wrong-password rejection, and cross-environment isolation (local proof only).
 ```
 
 El test no usa Neon, no lee credenciales y limpia solo los dos contenedores
