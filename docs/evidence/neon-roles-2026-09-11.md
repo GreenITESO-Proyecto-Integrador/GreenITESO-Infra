@@ -1,5 +1,10 @@
 # Verificación de roles Neon — 2026-09-11
 
+Esta página conserva la secuencia histórica de aplicación de grants. El
+[bootstrap posterior](neon-schema-2026-09-11.md) completó credenciales y esquema
+en dev/staging; sustituye los pendientes de esas dos ramas indicados abajo.
+Production y la prueba negativa entre ambientes siguen pendientes.
+
 Proyecto `cool-mouse-83825858`; base `neondb`; schema `public`. Scripts revisados en commit `9ff8bb7653346f4d256ccee4a890ea8bd77975c0`.
 
 Se ejecutaron `scripts/neon-role-apply.sh` y `scripts/neon-role-verify.sh` con selección explícita de ambiente, pg_service, archivo seguro y host/puerto del inventario. Production requirió además `--allow-production`. Las seis ejecuciones finalizaron con código 0; esto verifica el contrato SQL de grants, no la inicialización de contraseñas ni el login de los roles nuevos.
