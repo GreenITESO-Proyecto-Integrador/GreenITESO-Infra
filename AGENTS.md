@@ -16,9 +16,8 @@ Este overlay tiene prioridad sobre las skills upstream:
 - No se resetea staging/production para resolver conflictos de migraciones.
   Las restauraciones siempre empiezan en una rama desechable.
 
-P3 y P8 permanecen pendientes de producto. La página 9 del ERD (P9) fue
-confirmada como esquema aprobado el 2026-09-11: solo sus entidades/FKs,
-`campaign` nullable y `podium_snapshot` quedan establecidos. Las políticas de
-servicio de P10 (ventana temporal) y P11 (selección de clan) siguen pendientes
-y no se deben presentar como decisiones del esquema. Los estados pendientes
-de T8/T16 no se deben presentar como evidencia ejecutada.
+La página 9 del ERD fue confirmada como esquema aprobado el 2026-09-11:
+fija los FKs congelados (P3), `podium_snapshot` (P8) y `campaign` nullable (P9).
+Las políticas de servicio de esos puntos y las decisiones P10 y P11 siguen
+pendientes y no se deben presentar como decisiones del esquema. Los estados
+pendientes de T8/T16 no se deben presentar como evidencia ejecutada.

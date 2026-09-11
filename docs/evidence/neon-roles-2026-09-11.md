@@ -25,7 +25,8 @@ Conexión administrativa dev: psql confirmó TLS1.3 y contraseña utilizada. La 
 
 Revisión aplicada: `8ae84f72fa5b3dde783d5135ee7700e3c5cd1aa5`. Inventario de hosts confirmado con Neon CLI, incluyendo el componente de routing `c-4`. Las seis ejecuciones apply/verify volvieron a finalizar con código 0 en dev, staging y production. App ya no tiene TEMPORARY; migrador lo conserva. Los scripts verifican destino canónico, TLS, archivo de servicio privado, permisos y ausencia de grant options adicionales. La prueba local PG18 de los scripts también pasó tras corregir los hosts.
 
-No se cambiaron contraseñas ni se ejecutaron migraciones de dominio. Un intento
+**Estado histórico previo al bootstrap posterior:** no se cambiaron
+contraseñas ni se ejecutaron migraciones de dominio. Un intento
 posterior de inicializar credenciales con un verificador SCRAM pre-hasheado fue
 rechazado por Neon (HTTP 400: el servicio requiere plaintext); no se debe
 interpretar como bootstrap completado. Sigue pendiente provisionar cada
