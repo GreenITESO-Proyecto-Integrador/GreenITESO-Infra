@@ -34,6 +34,12 @@ BEGIN
      OR migrator_record.rolreplication OR migrator_record.rolbypassrls OR NOT migrator_record.rolcanlogin THEN
     RAISE EXCEPTION 'migrator role has unsafe attributes';
   END IF;
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'neon_superuser') THEN
+    IF pg_has_role(app_role, 'neon_superuser', 'USAGE')
+       OR pg_has_role(migrator_role, 'neon_superuser', 'USAGE') THEN
+      RAISE EXCEPTION 'an environment role is a neon_superuser member';
+    END IF;
+  END IF;
   IF NOT has_schema_privilege(app_role, schema_name, 'USAGE')
      OR has_schema_privilege(app_role, schema_name, 'CREATE') THEN
     RAISE EXCEPTION 'app schema privileges are not USAGE-only';

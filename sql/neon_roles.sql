@@ -61,6 +61,12 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'an environment role has unsafe attributes; inspect pg_roles before retrying';
   END IF;
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'neon_superuser') THEN
+    IF pg_has_role(app_role, 'neon_superuser', 'USAGE')
+       OR pg_has_role(migrator_role, 'neon_superuser', 'USAGE') THEN
+      RAISE EXCEPTION 'an environment role is a neon_superuser member; use a new SQL-created role';
+    END IF;
+  END IF;
 END
 $$;
 
