@@ -44,10 +44,11 @@ Verificación del backend: rama predeterminada `dev`, commit [`37e4809baf546d221
 - [Documentación de despliegue](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/37e4809baf546d22154f51dd5373e42eeefd6464/docs/deployment.md): cuatro etapas `dev → test → preprod → prod`.
 - [Workflows](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/tree/37e4809baf546d22154f51dd5373e42eeefd6464/.github/workflows): `deploy-dev.yml`, `deploy-test.yml`, `deploy-preprod.yml`, `deploy-prod.yml`; `promote.yml` ofrece `test`, `preprod`, `prod`.
 - Git branches remotas: `dev`, `main`, `test`, `preprod`, `prod`. `main` también contiene los cuatro workflows de despliegue.
-- La API de GitHub Environments devuelve únicamente `dev`. Un workflow o branch no demuestra que exista el servicio cloud correspondiente.
+- La API de GitHub Environments devuelve `copilot` y `dev`; `copilot` corresponde a tooling y `dev` sigue siendo el único ambiente de aplicación observado. Los branches y workflows antiguos se conservan, pero no demuestran que exista el servicio cloud correspondiente.
 - La región Cloud Run se toma de `secrets.GCP_REGION`; no se leyó su valor ni se verificó la región desplegada. Una ejecución verde tampoco prueba despliegue: el workflow puede omitirlo cuando falta configuración.
+- La conexión real de solo lectura con `dev_owner` confirmó `TLSv1.3` mediante `\conninfo`; el fallback nativo IPv6 demoró aproximadamente 30 segundos antes de completar por IPv4.
 
-**Acción pendiente de coordinación Backend/Infra:** alinear workflows, promoción, documentación y GitHub Environments con los tres ambientes acordados antes de conectar T3/T4/T15. No asignar silenciosamente dos ambientes distintos a una misma rama Neon. Esta revisión no modifica el pipeline.
+**Acción pendiente de coordinación Backend/Infra:** alinear workflows, promoción, documentación y GitHub Environments con los tres ambientes acordados antes de conectar T3/T4/T15. El [PR de borrador #30](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/pull/30) propone esa alineación y tiene checks verdes, pero aún no está fusionado ni desplegado. No asignar silenciosamente dos ambientes distintos a una misma rama Neon.
 
 ## Instalación reproducible (solo Infra)
 
@@ -82,7 +83,7 @@ Fuentes del proveedor: [paquete oficial](https://www.npmjs.com/package/neon/v/4.
 - El CLI almacena credenciales en `~/.config/neon/credentials.json`, fuera del repositorio; permisos verificados **0600** (`-rw-------`). No copiar ese archivo al repo, tickets o logs.
 - `.neon` contiene IDs/contexto, no tokens. Se mantiene ignorado para evitar que el contexto local predeterminado de production se propague a otros checkouts.
 - `.gitignore` excluye `.neon`, sus variantes, `.env`, `.env.*`, archivos de credenciales y `node_modules`; permite `.env.example` sin secretos.
-- No se descargaron cadenas de conexión ni se crearon API keys manuales; T3 creó únicamente las ramas indicadas arriba. T13 aún no ha aplicado roles SQL ni migraciones y esta revisión no ejecutó consultas contra Neon.
+- No se descargaron cadenas de conexión ni se crearon API keys manuales; T3 creó únicamente las ramas indicadas arriba. T13 aún no ha aplicado roles SQL ni migraciones; la conexión de `dev_owner` se usó solo para lectura de identidad y TLS, sin mutaciones SQL.
 - **Los desarrolladores y CI local no necesitan Neon CLI ni login.** T7 usará PostgreSQL 18 local. `neon init`, `neon skills`, `neon mcp` y Neon Auth no son prerrequisitos; T2 fue retirado y la autenticación elegida es Firebase.
 
 ## Verificación reproducible, solo lectura

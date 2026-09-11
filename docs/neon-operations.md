@@ -111,7 +111,9 @@ un ownership transfer. El acceptance test cubre el caso seguro y frecuente de
 una nueva tabla creada por el migrator, seguida de DML del app.
 
 El wrapper exige un nombre de servicio `pg_service.conf`, un host y un puerto
-esperados. Así, `--environment dev` no convierte una entrada mal configurada
+esperados. Rechaza `hostaddr` en la entrada y limpia los overrides de destino
+de libpq (`PGHOSTADDR`, `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`) antes de
+conectar. Así, `--environment dev` no convierte una entrada mal configurada
 que apunte a production en un destino válido. También exige
 `--allow-production` para un bootstrap de production:
 
@@ -160,9 +162,12 @@ prueba:
 - default privileges al crear una tabla con identity;
 - INSERT y SELECT del app;
 - fallo de `CREATE TABLE` y `CREATE ROLE` del app;
+- fallo de `ALTER` y `DROP` del app, preservación de ownership/ACL existentes y
+  rechazo de verificación desde el rol app o contra una base etiquetada de forma incorrecta;
 - ausencia del rol staging en el catálogo production (role/catalog isolation;
   trust auth no sustituye la prueba de contraseña en Cloud);
-- rechazo del wrapper cuando host/puerto apuntan a otro ambiente.
+- rechazo del wrapper cuando host/puerto apuntan a otro ambiente o cuando se
+  intenta usar `hostaddr` desde el servicio o el entorno.
 
 Con Docker/Colima y un cliente `psql` 18 instalado:
 
@@ -174,7 +179,7 @@ PATH=/opt/homebrew/opt/libpq/bin:$PATH \
 Resultado observado el 2026-09-11:
 
 ```text
-PASS: PG18 roles, DML, DDL denial, default privileges, role/catalog isolation, and target binding (password auth remains a cloud check).
+PASS: PG18 roles, DML, DDL denial, default privileges, owner preservation, role/catalog isolation, admin/database guards, and target binding (password auth remains a cloud check).
 ```
 
 El test no usa Neon, no lee credenciales y limpia solo los dos contenedores

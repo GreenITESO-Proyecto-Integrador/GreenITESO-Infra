@@ -63,9 +63,19 @@ service_port=$(awk -v section="[$service]" '
   printf 'refusing target: service port does not match expected branch endpoint (%s)\n' "$expected_port" >&2
   exit 3
 }
+if awk -v section="[$service]" '
+  $0 == section { in_section=1; next }
+  /^\[/ { in_section=0 }
+  in_section && tolower($0) ~ /^[[:space:]]*hostaddr[[:space:]]*=/ { found=1; exit }
+  END { exit(found ? 0 : 1) }
+' "$service_file"; then
+  printf '%s\n' 'refusing target: pg_service entry must not contain hostaddr' >&2
+  exit 3
+fi
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 export PGSERVICEFILE="$service_file"
-exec psql -X --no-psqlrc "service=$service" \
+exec env -u PGHOSTADDR -u PGHOST -u PGPORT -u PGDATABASE -u PGUSER \
+  psql -X --no-psqlrc "service=$service" \
   -v ON_ERROR_STOP=1 \
   -v target_env="$environment" \
   -v database_name="$database" \

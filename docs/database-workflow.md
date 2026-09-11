@@ -119,6 +119,8 @@ falta una migración explícita de datos. Cada equipo conserva su base local;
 `staging` es compartido y no se usa para experimentos destructivos.
 
 La reproducción automatizada de un par de migraciones de equipos es parte de
-T10. La política y la lista de revisión ya están documentadas; la evidencia
-de una ejecución con el scaffold final de Backend queda pendiente de la
-integración de T7/T9a.
+T10. El script `rehearse-migration-conflict.py` de [Backend PR #29](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/pull/29)
+ya reprodujo el conflicto sobre PostgreSQL 18, ejecutó el merge limpio y
+conservó las dos filas de datos resultantes. La comunicación y revisión con
+los equipos aún está pendiente; la evidencia no autoriza por sí sola una
+migración en un ambiente compartido.

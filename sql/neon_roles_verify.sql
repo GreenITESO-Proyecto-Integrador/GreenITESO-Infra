@@ -20,7 +20,17 @@ DECLARE
   public_create boolean;
   app_default_tables boolean;
   app_default_sequences boolean;
+  current_role_record pg_roles%ROWTYPE;
 BEGIN
+  IF current_database() <> database_name THEN
+    RAISE EXCEPTION 'wrong database: expected %, connected to %', database_name, current_database();
+  END IF;
+  SELECT * INTO current_role_record FROM pg_roles WHERE rolname = current_user;
+  IF current_user IN (app_role, migrator_role)
+     OR NOT (current_role_record.rolsuper OR current_role_record.rolcreaterole
+             OR current_role_record.oid = (SELECT datdba FROM pg_database WHERE datname = current_database())) THEN
+    RAISE EXCEPTION 'role verification must run as the database owner or an administrator';
+  END IF;
   SELECT * INTO app_record FROM pg_roles WHERE rolname = app_role;
   SELECT * INTO migrator_record FROM pg_roles WHERE rolname = migrator_role;
   IF app_record.rolname IS NULL OR migrator_record.rolname IS NULL THEN
@@ -33,6 +43,22 @@ BEGIN
   IF migrator_record.rolsuper OR migrator_record.rolcreatedb OR migrator_record.rolcreaterole
      OR migrator_record.rolreplication OR migrator_record.rolbypassrls OR NOT migrator_record.rolcanlogin THEN
     RAISE EXCEPTION 'migrator role has unsafe attributes';
+  END IF;
+  -- Even NOINHERIT membership can allow SET ROLE. Neither environment
+  -- identity needs membership in any other role for this contract.
+  IF EXISTS (
+    SELECT 1 FROM pg_auth_members membership
+    JOIN pg_roles member_role ON member_role.oid = membership.member
+    WHERE member_role.rolname IN (app_role, migrator_role)
+  ) THEN
+    RAISE EXCEPTION 'environment roles must not be members of other roles';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM pg_class relation
+    JOIN pg_roles owner_role ON owner_role.oid = relation.relowner
+    WHERE owner_role.rolname = app_role
+  ) THEN
+    RAISE EXCEPTION 'app role must not own database relations';
   END IF;
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'neon_superuser') THEN
     IF pg_has_role(app_role, 'neon_superuser', 'USAGE')

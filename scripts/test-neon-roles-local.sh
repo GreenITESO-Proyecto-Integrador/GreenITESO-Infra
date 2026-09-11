@@ -52,12 +52,21 @@ for port in "$staging_port" "$production_port"; do
     -c 'CREATE ROLE neondb_owner LOGIN CREATEDB CREATEROLE; ALTER DATABASE neondb OWNER TO neondb_owner;'
 done
 
+# Seed a pre-existing owner membership and relation in staging. Bootstrap must
+# preserve both while still configuring defaults for the migrator role.
+"$psql_bin" -h 127.0.0.1 -p "$staging_port" -U postgres -d neondb -v ON_ERROR_STOP=1 \
+  -c 'CREATE ROLE greeniteso_staging_migrator LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS; GRANT greeniteso_staging_migrator TO neondb_owner WITH SET TRUE;'
+"$psql_bin" -h 127.0.0.1 -p "$staging_port" -U neondb_owner -d neondb -v ON_ERROR_STOP=1 \
+  -c 'CREATE TABLE owner_probe (id integer PRIMARY KEY, payload text NOT NULL); CREATE ROLE audit_probe NOLOGIN; GRANT SELECT ON owner_probe TO audit_probe;'
+
 printf '[staging_owner]\nhost=127.0.0.1\nport=%s\ndbname=neondb\nuser=neondb_owner\n\n' "$staging_port" >"$service_file"
 printf '[staging_app]\nhost=127.0.0.1\nport=%s\ndbname=neondb\nuser=greeniteso_staging_app\n\n' "$staging_port" >>"$service_file"
 printf '[staging_migrator]\nhost=127.0.0.1\nport=%s\ndbname=neondb\nuser=greeniteso_staging_migrator\n\n' "$staging_port" >>"$service_file"
 printf '[production_owner]\nhost=127.0.0.1\nport=%s\ndbname=neondb\nuser=neondb_owner\n\n' "$production_port" >>"$service_file"
 printf '[production_app]\nhost=127.0.0.1\nport=%s\ndbname=neondb\nuser=greeniteso_production_app\n\n' "$production_port" >>"$service_file"
 printf '[staging_on_production]\nhost=127.0.0.1\nport=%s\ndbname=neondb\nuser=greeniteso_staging_app\n' "$production_port" >>"$service_file"
+printf '[hostaddr_env_bypass]\nhost=branch-label.invalid\nport=%s\ndbname=neondb\nuser=neondb_owner\n\n' "$staging_port" >>"$service_file"
+printf '[hostaddr_service_bypass]\nhost=branch-label.invalid\nhostaddr=127.0.0.1\nport=%s\ndbname=neondb\nuser=neondb_owner\n' "$staging_port" >>"$service_file"
 
 export PATH="$(dirname "$psql_bin"):$PATH"
 scripts/neon-role-apply.sh --environment staging --service staging_owner \
@@ -66,6 +75,17 @@ scripts/neon-role-apply.sh --environment staging --service staging_owner \
   --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$staging_port" >/dev/null
 scripts/neon-role-verify.sh --environment staging --service staging_owner \
   --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$staging_port" >/dev/null
+if scripts/neon-role-verify.sh --environment staging --service staging_app \
+  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$staging_port" >/dev/null 2>&1; then
+  printf '%s\n' 'FAIL: app role executed administrative verification' >&2
+  exit 1
+fi
+if scripts/neon-role-verify.sh --environment staging --service staging_owner \
+  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$staging_port" \
+  --database postgres >/dev/null 2>&1; then
+  printf '%s\n' 'FAIL: verifier accepted a mislabeled database' >&2
+  exit 1
+fi
 scripts/neon-role-apply.sh --environment production --service production_owner \
   --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$production_port" \
   --allow-production >/dev/null
@@ -83,10 +103,39 @@ if PGSERVICEFILE="$service_file" "$psql_bin" -X service=staging_app -v ON_ERROR_
   exit 1
 fi
 if PGSERVICEFILE="$service_file" "$psql_bin" -X service=staging_app -v ON_ERROR_STOP=1 \
+  -c 'ALTER TABLE role_probe ADD COLUMN app_ddl_must_fail integer;' >/dev/null 2>&1; then
+  printf '%s\n' 'FAIL: app role altered a table' >&2
+  exit 1
+fi
+if PGSERVICEFILE="$service_file" "$psql_bin" -X service=staging_app -v ON_ERROR_STOP=1 \
+  -c 'DROP TABLE role_probe;' >/dev/null 2>&1; then
+  printf '%s\n' 'FAIL: app role dropped a table' >&2
+  exit 1
+fi
+if PGSERVICEFILE="$service_file" "$psql_bin" -X service=staging_app -v ON_ERROR_STOP=1 \
   -c 'CREATE ROLE app_role_must_fail;' >/dev/null 2>&1; then
   printf '%s\n' 'FAIL: app role created a role' >&2
   exit 1
 fi
+
+owner_probe_owner=$("$psql_bin" -h 127.0.0.1 -p "$staging_port" -U postgres -d neondb -Atqc \
+  "SELECT owner_role.rolname FROM pg_class relation JOIN pg_roles owner_role ON owner_role.oid = relation.relowner WHERE relation.relname = 'owner_probe';")
+[[ $owner_probe_owner == neondb_owner ]] || {
+  printf 'FAIL: existing owner_probe ownership changed (%s)\n' "$owner_probe_owner" >&2
+  exit 1
+}
+owner_membership=$("$psql_bin" -h 127.0.0.1 -p "$staging_port" -U postgres -d neondb -Atqc \
+  "SELECT count(*) FROM pg_auth_members membership JOIN pg_roles member ON member.oid = membership.member JOIN pg_roles granted_role ON granted_role.oid = membership.roleid WHERE member.rolname = 'neondb_owner' AND granted_role.rolname = 'greeniteso_staging_migrator' AND membership.set_option;")
+[[ $owner_membership == 1 ]] || {
+  printf 'FAIL: pre-existing owner membership was not preserved (%s)\n' "$owner_membership" >&2
+  exit 1
+}
+audit_privilege=$("$psql_bin" -h 127.0.0.1 -p "$staging_port" -U postgres -d neondb -Atqc \
+  "SELECT has_table_privilege('audit_probe', 'public.owner_probe', 'SELECT');")
+[[ $audit_privilege == t ]] || {
+  printf 'FAIL: unrelated existing table ACL was not preserved (%s)\n' "$audit_privilege" >&2
+  exit 1
+}
 
 # The staging role was never created in the production branch/container, so a
 # staging credential cannot authenticate there. This local trust-auth check
@@ -106,4 +155,39 @@ if scripts/neon-role-verify.sh --environment staging --service staging_on_produc
   exit 1
 fi
 
-printf '%s\n' 'PASS: PG18 roles, DML, DDL denial, default privileges, role/catalog isolation, and target binding (password auth remains a cloud check).'
+# NOINHERIT membership can still permit SET ROLE escalation. Verification
+# must reject this even when inherited schema privileges appear harmless.
+"$psql_bin" "postgresql://postgres@127.0.0.1:${staging_port}/neondb" -v ON_ERROR_STOP=1 \
+  -c 'CREATE ROLE escalation_probe NOLOGIN; GRANT CREATE ON SCHEMA public TO escalation_probe; GRANT escalation_probe TO greeniteso_staging_app WITH INHERIT FALSE, SET TRUE;' >/dev/null
+if scripts/neon-role-verify.sh --environment staging --service staging_owner \
+  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$staging_port" >/dev/null 2>&1; then
+  printf '%s\n' 'FAIL: verifier accepted SET ROLE escalation through NOINHERIT membership' >&2
+  exit 1
+fi
+
+# The wrapper must not accept a routing address supplied by libpq's environment
+# or hidden in the service entry while the visible host matches the expectation.
+if PGSERVICEFILE="$service_file" PGHOSTADDR=127.0.0.1 scripts/neon-role-verify.sh \
+  --environment staging --service hostaddr_env_bypass --service-file "$service_file" \
+  --expected-host branch-label.invalid --expected-port "$staging_port" >/dev/null 2>&1; then
+  printf '%s\n' 'FAIL: target binding accepted PGHOSTADDR override' >&2
+  exit 1
+fi
+if PGSERVICEFILE="$service_file" PGHOSTADDR=127.0.0.1 scripts/neon-role-apply.sh \
+  --environment staging --service hostaddr_env_bypass --service-file "$service_file" \
+  --expected-host branch-label.invalid --expected-port "$staging_port" >/dev/null 2>&1; then
+  printf '%s\n' 'FAIL: apply target binding accepted PGHOSTADDR override' >&2
+  exit 1
+fi
+if scripts/neon-role-verify.sh --environment staging --service hostaddr_service_bypass \
+  --service-file "$service_file" --expected-host branch-label.invalid --expected-port "$staging_port" >/dev/null 2>&1; then
+  printf '%s\n' 'FAIL: target binding accepted service hostaddr override' >&2
+  exit 1
+fi
+if scripts/neon-role-apply.sh --environment staging --service hostaddr_service_bypass \
+  --service-file "$service_file" --expected-host branch-label.invalid --expected-port "$staging_port" >/dev/null 2>&1; then
+  printf '%s\n' 'FAIL: apply target binding accepted service hostaddr override' >&2
+  exit 1
+fi
+
+printf '%s\n' 'PASS: PG18 roles, DML, DDL denial, default privileges, owner preservation, role/catalog isolation, admin/database guards, and target binding (password auth remains a cloud check).'

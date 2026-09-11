@@ -61,6 +61,22 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'an environment role has unsafe attributes; inspect pg_roles before retrying';
   END IF;
+  -- Even NOINHERIT membership can allow SET ROLE. Neither environment
+  -- identity needs membership in any other role for this contract.
+  IF EXISTS (
+    SELECT 1 FROM pg_auth_members membership
+    JOIN pg_roles member_role ON member_role.oid = membership.member
+    WHERE member_role.rolname IN (app_role, migrator_role)
+  ) THEN
+    RAISE EXCEPTION 'environment roles must not be members of other roles';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM pg_class relation
+    JOIN pg_roles owner_role ON owner_role.oid = relation.relowner
+    WHERE owner_role.rolname = app_role
+  ) THEN
+    RAISE EXCEPTION 'app role must not own database relations';
+  END IF;
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'neon_superuser') THEN
     IF pg_has_role(app_role, 'neon_superuser', 'USAGE')
        OR pg_has_role(migrator_role, 'neon_superuser', 'USAGE') THEN
@@ -112,10 +128,55 @@ SELECT format(
 -- Defaults must be attached to the role that actually creates migration
 -- objects. A Neon SQL owner can create the roles but may not be a member of a
 -- freshly created migrator role. PostgreSQL 16+ role membership options make
--- SET explicit; the grant is revoked after the default ACL statements. The
--- owner-created role's administrative membership remains controlled by the
--- database owner, while the runtime app has no membership at all.
-SELECT format('GRANT %I TO %I WITH SET TRUE', :'migrator_role', current_user) \gexec
+-- SET explicit. Preserve any pre-existing owner membership and abort if it
+-- cannot SET ROLE; do not silently change an owner's membership options.
+DO $$
+DECLARE
+  migrator_role text := current_setting('greeniteso.migrator_role');
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_auth_members membership
+    WHERE membership.member = (SELECT oid FROM pg_roles WHERE rolname = current_user)
+      AND membership.roleid = (SELECT oid FROM pg_roles WHERE rolname = migrator_role)
+  ) AND NOT EXISTS (
+    SELECT 1
+    FROM pg_auth_members membership
+    WHERE membership.member = (SELECT oid FROM pg_roles WHERE rolname = current_user)
+      AND membership.roleid = (SELECT oid FROM pg_roles WHERE rolname = migrator_role)
+      AND membership.set_option
+  ) AND NOT EXISTS (
+    SELECT 1
+    FROM pg_auth_members membership
+    WHERE membership.member = (SELECT oid FROM pg_roles WHERE rolname = current_user)
+      AND membership.roleid = (SELECT oid FROM pg_roles WHERE rolname = migrator_role)
+      AND membership.admin_option
+  ) THEN
+    RAISE EXCEPTION 'current owner has a non-settable membership in %; review it before retrying', migrator_role;
+  END IF;
+  IF EXISTS (
+    SELECT 1
+    FROM pg_auth_members membership
+    WHERE membership.member = (SELECT oid FROM pg_roles WHERE rolname = current_user)
+      AND membership.roleid = (SELECT oid FROM pg_roles WHERE rolname = migrator_role)
+      AND membership.grantor = (SELECT oid FROM pg_roles WHERE rolname = current_user)
+      AND NOT membership.set_option
+  ) THEN
+    RAISE EXCEPTION 'current owner has a non-settable membership in %; review it before retrying', migrator_role;
+  END IF;
+END
+$$;
+
+SELECT NOT EXISTS (
+  SELECT 1
+  FROM pg_auth_members membership
+  WHERE membership.member = (SELECT oid FROM pg_roles WHERE rolname = current_user)
+    AND membership.roleid = (SELECT oid FROM pg_roles WHERE rolname = :'migrator_role')
+    AND membership.set_option
+) AS owner_needs_migrator_grant
+\gset
+SELECT format('GRANT %I TO %I WITH SET TRUE', :'migrator_role', current_user)
+WHERE :'owner_needs_migrator_grant' = 't' \gexec
 SET ROLE :'migrator_role';
 SELECT format(
   'ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO %I',
@@ -126,7 +187,8 @@ SELECT format(
   :'schema_name', :'app_role'
 ) \gexec
 RESET ROLE;
-SELECT format('REVOKE %I FROM %I', :'migrator_role', current_user) \gexec
+SELECT format('REVOKE %I FROM %I', :'migrator_role', current_user)
+WHERE :'owner_needs_migrator_grant' = 't' \gexec
 
 COMMIT;
 
