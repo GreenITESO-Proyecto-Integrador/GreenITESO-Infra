@@ -1,6 +1,6 @@
 # T1 — Inventario Neon y tooling de Infra
 
-Verificado: **2026-09-10**, mediante la consola autenticada y Neon CLI **4.16.0**. Ticket: [Infra #1](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/1).
+Verificado: **2026-09-11**, mediante la consola autenticada y Neon CLI **4.16.0**. Ticket: [Infra #1](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/1).
 
 ## Inventario observado
 
@@ -16,8 +16,7 @@ Verificado: **2026-09-10**, mediante la consola autenticada y Neon CLI **4.16.0*
 | Propietario SQL actual | `neondb_owner`; no confundirlo con los roles app/migrator pendientes de T13 |
 | PostgreSQL | **18** |
 | Región | `aws-us-east-2` — AWS US East 2 (Ohio) |
-| Rama existente | `production`, predeterminada, ID `br-falling-forest-axgavkxc` |
-| Ramas pendientes | `dev` y `staging` (T3) |
+| Ramas | `production` (predeterminada, `br-falling-forest-axgavkxc`), `staging` (`br-long-band-axwyo7yx`), `dev` (`br-wild-leaf-axhsrol6`) |
 | Compute de production | `ep-old-salad-axvsz82z`, read-write, observado `idle`, rango 0.25–2 CU |
 | Suspensión | API: `suspend_timeout_seconds=0`, que significa usar el valor global; Free usa 5 minutos de inactividad |
 | Retención configurada | `21600` segundos = 6 horas |
@@ -30,13 +29,15 @@ Fuentes: [consola del proyecto](https://console.neon.tech/app/projects/cool-mous
 
 Fernando ratificó el **2026-09-10** mantener tres ambientes. El mapeo objetivo de T3 sigue siendo:
 
-| Ambiente objetivo | Cloud Run previsto en T3 | Rama Neon | Estado Neon |
+| Ambiente objetivo | Cloud Run previsto en T3 | Rama Neon | Estado Neon al 2026-09-11 |
 | --- | --- | --- | --- |
-| Desarrollo desplegado | `greeniteso-dev` | `dev` | No creada |
-| Staging | `greeniteso-staging` | `staging` | No creada |
-| Producción | `greeniteso-prod` | `production` | Existe |
+| Desarrollo desplegado | `greeniteso-dev` | `dev` | Creada desde `production`; ID `br-wild-leaf-axhsrol6`; endpoint `ep-lively-brook-ax4n0pys` |
+| Staging | `greeniteso-staging` | `staging` | Creada desde `production`; ID `br-long-band-axwyo7yx`; endpoint `ep-withered-cake-axk8vlfi` |
+| Producción | `greeniteso-prod` | `production` | Existe; ID `br-falling-forest-axgavkxc`; endpoint `ep-old-salad-axvsz82z` |
 
 **Desarrollo local** significa PostgreSQL en devcontainer, no la rama cloud `dev`.
+
+T3 creó `staging` y `dev` el **2026-09-11** con `--project-id cool-mouse-83825858`, `--parent production`, `--cu 0.25-1` y `--no-secrets`. El plan Free rechazó `--suspend-timeout 300`; al omitirlo, ambas ramas usan el valor global observado de 300 segundos. No se configuró expiración. La creación de una rama copia roles y bases de datos del padre: estos IDs no aíslan credenciales por sí solos. T13 debe crear roles SQL únicos por ambiente y T4 debe publicar solo referencias de secretos.
 
 Verificación del backend: rama predeterminada `dev`, commit [`37e4809baf546d22154f51dd5373e42eeefd6464`](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/tree/37e4809baf546d22154f51dd5373e42eeefd6464).
 
@@ -81,7 +82,7 @@ Fuentes del proveedor: [paquete oficial](https://www.npmjs.com/package/neon/v/4.
 - El CLI almacena credenciales en `~/.config/neon/credentials.json`, fuera del repositorio; permisos verificados **0600** (`-rw-------`). No copiar ese archivo al repo, tickets o logs.
 - `.neon` contiene IDs/contexto, no tokens. Se mantiene ignorado para evitar que el contexto local predeterminado de production se propague a otros checkouts.
 - `.gitignore` excluye `.neon`, sus variantes, `.env`, `.env.*`, archivos de credenciales y `node_modules`; permite `.env.example` sin secretos.
-- No se descargaron cadenas de conexión, no se crearon API keys manuales, roles ni ramas y no se ejecutaron consultas SQL o migraciones.
+- No se descargaron cadenas de conexión ni se crearon API keys manuales; T3 creó únicamente las ramas indicadas arriba. T13 aún no ha aplicado roles SQL ni migraciones y esta revisión no ejecutó consultas contra Neon.
 - **Los desarrolladores y CI local no necesitan Neon CLI ni login.** T7 usará PostgreSQL 18 local. `neon init`, `neon skills`, `neon mcp` y Neon Auth no son prerrequisitos; T2 fue retirado y la autenticación elegida es Firebase.
 
 ## Verificación reproducible, solo lectura
