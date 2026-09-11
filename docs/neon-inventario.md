@@ -1,6 +1,6 @@
 # T1 — Inventario Neon y tooling de Infra
 
-Verificado: **2026-09-10**, mediante la consola autenticada y Neon CLI **4.16.0**. Ticket: [Infra #1](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/1).
+Verificado: **2026-09-11**, mediante la consola autenticada y Neon CLI **4.16.0**. Ticket: [Infra #1](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/1).
 
 ## Inventario observado
 
@@ -16,8 +16,7 @@ Verificado: **2026-09-10**, mediante la consola autenticada y Neon CLI **4.16.0*
 | Propietario SQL actual | `neondb_owner`; no confundirlo con los roles app/migrator pendientes de T13 |
 | PostgreSQL | **18** |
 | Región | `aws-us-east-2` — AWS US East 2 (Ohio) |
-| Rama existente | `production`, predeterminada, ID `br-falling-forest-axgavkxc` |
-| Ramas pendientes | `dev` y `staging` (T3) |
+| Ramas | `production` (predeterminada, `br-falling-forest-axgavkxc`), `staging` (`br-long-band-axwyo7yx`), `dev` (`br-wild-leaf-axhsrol6`) |
 | Compute de production | `ep-old-salad-axvsz82z`, read-write, observado `idle`, rango 0.25–2 CU |
 | Suspensión | API: `suspend_timeout_seconds=0`, que significa usar el valor global; Free usa 5 minutos de inactividad |
 | Retención configurada | `21600` segundos = 6 horas |
@@ -30,23 +29,27 @@ Fuentes: [consola del proyecto](https://console.neon.tech/app/projects/cool-mous
 
 Fernando ratificó el **2026-09-10** mantener tres ambientes. El mapeo objetivo de T3 sigue siendo:
 
-| Ambiente objetivo | Cloud Run previsto en T3 | Rama Neon | Estado Neon |
+| Ambiente objetivo | Cloud Run previsto en T3 | Rama Neon | Estado Neon al 2026-09-11 |
 | --- | --- | --- | --- |
-| Desarrollo desplegado | `greeniteso-dev` | `dev` | No creada |
-| Staging | `greeniteso-staging` | `staging` | No creada |
-| Producción | `greeniteso-prod` | `production` | Existe |
+| Desarrollo desplegado | `greeniteso-dev` | `dev` | Creada desde `production`; ID `br-wild-leaf-axhsrol6`; endpoint `ep-lively-brook-ax4n0pys` |
+| Staging | `greeniteso-staging` | `staging` | Creada desde `production`; ID `br-long-band-axwyo7yx`; endpoint `ep-withered-cake-axk8vlfi` |
+| Producción | `greeniteso-prod` | `production` | Existe; ID `br-falling-forest-axgavkxc`; endpoint `ep-old-salad-axvsz82z` |
 
 **Desarrollo local** significa PostgreSQL en devcontainer, no la rama cloud `dev`.
+
+T3 creó `staging` y `dev` el **2026-09-11** con `--project-id cool-mouse-83825858`, `--parent production`, `--cu 0.25-1` y `--no-secrets`. El plan Free rechazó `--suspend-timeout 300`; al omitirlo, ambas ramas usan el valor global observado de 300 segundos. No se configuró expiración. La creación de una rama copia roles y bases de datos del padre: estos IDs no aíslan credenciales por sí solos. T13 debe crear roles SQL únicos por ambiente y T4 debe publicar solo referencias de secretos.
 
 Verificación del backend: rama predeterminada `dev`, commit [`37e4809baf546d22154f51dd5373e42eeefd6464`](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/tree/37e4809baf546d22154f51dd5373e42eeefd6464).
 
 - [Documentación de despliegue](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/37e4809baf546d22154f51dd5373e42eeefd6464/docs/deployment.md): cuatro etapas `dev → test → preprod → prod`.
 - [Workflows](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/tree/37e4809baf546d22154f51dd5373e42eeefd6464/.github/workflows): `deploy-dev.yml`, `deploy-test.yml`, `deploy-preprod.yml`, `deploy-prod.yml`; `promote.yml` ofrece `test`, `preprod`, `prod`.
 - Git branches remotas: `dev`, `main`, `test`, `preprod`, `prod`. `main` también contiene los cuatro workflows de despliegue.
-- La API de GitHub Environments devuelve únicamente `dev`. Un workflow o branch no demuestra que exista el servicio cloud correspondiente.
+- GitHub Environments ahora incluye `dev`, `staging` y `production` (`copilot` es tooling). Staging permite Git `staging`; production permite Git `main` y exige revisión de Fernando (`luci-efe`). Se verificaron las políticas mediante la API. Esto no provisiona Cloud Run, IAM ni secretos; el branch Git `staging` y los workflows nuevos siguen pendientes de integrar.
+- El mapeo operativo del diagrama vigente es `dev` Git → `dev` Neon, `staging` Git → `staging` Neon y `main` Git → `production` Neon. El pipeline de cuatro etapas antiguo se conserva hasta que se fusione la alineación propuesta.
 - La región Cloud Run se toma de `secrets.GCP_REGION`; no se leyó su valor ni se verificó la región desplegada. Una ejecución verde tampoco prueba despliegue: el workflow puede omitirlo cuando falta configuración.
+- La conexión real de solo lectura con `dev_owner` confirmó `TLSv1.3` mediante `\conninfo`; el fallback nativo IPv6 demoró aproximadamente 30 segundos antes de completar por IPv4.
 
-**Acción pendiente de coordinación Backend/Infra:** alinear workflows, promoción, documentación y GitHub Environments con los tres ambientes acordados antes de conectar T3/T4/T15. No asignar silenciosamente dos ambientes distintos a una misma rama Neon. Esta revisión no modifica el pipeline.
+**Acción pendiente de coordinación Backend/Infra:** alinear workflows, promoción, documentación y GitHub Environments con los tres ambientes acordados antes de conectar T3/T4/T15. El [PR de borrador #30](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/pull/30) propone esa alineación y tiene checks verdes, pero aún no está fusionado ni desplegado. No asignar silenciosamente dos ambientes distintos a una misma rama Neon.
 
 ## Instalación reproducible (solo Infra)
 
@@ -81,7 +84,7 @@ Fuentes del proveedor: [paquete oficial](https://www.npmjs.com/package/neon/v/4.
 - El CLI almacena credenciales en `~/.config/neon/credentials.json`, fuera del repositorio; permisos verificados **0600** (`-rw-------`). No copiar ese archivo al repo, tickets o logs.
 - `.neon` contiene IDs/contexto, no tokens. Se mantiene ignorado para evitar que el contexto local predeterminado de production se propague a otros checkouts.
 - `.gitignore` excluye `.neon`, sus variantes, `.env`, `.env.*`, archivos de credenciales y `node_modules`; permite `.env.example` sin secretos.
-- No se descargaron cadenas de conexión, no se crearon API keys manuales, roles ni ramas y no se ejecutaron consultas SQL o migraciones.
+- No se descargaron cadenas de conexión ni se crearon API keys manuales; T3 creó únicamente las ramas indicadas arriba. T13 aún no ha aplicado roles SQL ni migraciones; la conexión de `dev_owner` se usó solo para lectura de identidad y TLS, sin mutaciones SQL.
 - **Los desarrolladores y CI local no necesitan Neon CLI ni login.** T7 usará PostgreSQL 18 local. `neon init`, `neon skills`, `neon mcp` y Neon Auth no son prerrequisitos; T2 fue retirado y la autenticación elegida es Firebase.
 
 ## Verificación reproducible, solo lectura
