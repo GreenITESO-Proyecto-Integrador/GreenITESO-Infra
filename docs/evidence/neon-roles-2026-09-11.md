@@ -15,3 +15,9 @@ En los tres ambientes: LOGIN habilitado, sin SUPERUSER/CREATEDB/CREATEROLE/REPLI
 Antes de aplicar: cero tablas public en cada rama. No se ejecutaron migraciones del dominio ni se cargaron datos. Los scripts no crearon ni cambiaron contraseñas; faltan provisión inicial segura en Secret Manager, autenticación con cada rol y prueba negativa entre ambientes. Por ello T13 sigue abierto.
 
 Conexión administrativa dev: psql confirmó TLS1.3 y contraseña utilizada. La vista pg_stat_ssl detrás del proxy reportó false; la evidencia TLS corresponde al cliente (\conninfo), no a esa vista. IPv6 necesitó fallback a IPv4 en este Mac; esta observación no es una medición de Cloud Run.
+
+## Segunda verificación: endurecimiento de roles
+
+Revisión aplicada: `8ae84f72fa5b3dde783d5135ee7700e3c5cd1aa5`. Inventario de hosts confirmado con Neon CLI, incluyendo el componente de routing `c-4`. Las seis ejecuciones apply/verify volvieron a finalizar con código 0 en dev, staging y production. App ya no tiene TEMPORARY; migrador lo conserva. Los scripts verifican destino canónico, TLS, archivo de servicio privado, permisos y ausencia de grant options adicionales. La prueba local PG18 de los scripts también pasó tras corregir los hosts.
+
+No se cambiaron contraseñas ni se ejecutaron migraciones de dominio. Sigue pendiente validar autenticación real de los nuevos roles y aislamiento entre ambientes después de provisionar las credenciales.
