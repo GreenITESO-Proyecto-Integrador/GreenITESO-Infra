@@ -102,6 +102,9 @@ crean con [sql/neon_roles.sql](../sql/neon_roles.sql). El script:
   el DML previsto;
 - retira `TEMPORARY` del app y lo conserva solo para el migrator; no deja al
   app privilegios de tablas fuera de su contrato ni grant options;
+- fija `lock_timeout=5s` para el migrator y
+  `idle_in_transaction_session_timeout=60s` para el app por database; no fija
+  un `statement_timeout` global que corte migraciones largas;
 - no contiene ninguna cláusula `PASSWORD`, nunca cambia contraseñas en una
   repetición y no modifica filas ni transfiere ownership de tablas existentes.
 
@@ -109,8 +112,12 @@ El ownership importa: PostgreSQL no permite que un `GRANT` genérico altere o
 elimine una tabla que pertenece a otro rol. En production, el owner actual
 `neondb_owner` y cualquier ownership de tablas preexistentes deben inventariarse
 antes de autorizar una migration que altere esas tablas. Este runbook no hace
-un ownership transfer. El acceptance test cubre el caso seguro y frecuente de
-una nueva tabla creada por el migrator, seguida de DML del app.
+un ownership transfer. El apply puede continuar con
+`--allow-existing-owners` después de esa revisión, pero el verificador falla
+cerrado mientras una relación del schema siga perteneciendo a otro rol; la
+salida indica un recorrido owner-run o una estrategia aprobada. El acceptance
+test conserva el owner preexistente y cubre el caso seguro y frecuente de una
+nueva tabla creada por el migrator, seguida de DML del app.
 
 El wrapper exige un nombre de servicio `pg_service.conf`, un host y un puerto
 esperados. Rechaza `hostaddr` en la entrada y limpia los overrides de destino
@@ -218,6 +225,13 @@ Entradas pendientes que el responsable de GCP debe aportar antes de cerrar T4:
 2. secret names/version policy, service account runtime y permisos
    `secretmanager.versions.access` mínimos;
 3. rol app pooled y rol migrator direct por ambiente, con hosts verificados;
+   cada URL desplegada debe usar `sslmode=verify-full`: la app recibe la URL
+   pooled y el job migrator la URL directa. El contrato de
+   [Backend PR29](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/pull/29) usa
+   `/etc/ssl/certs/ca-certificates.crt` cuando existe en la imagen y el
+   almacén CA del sistema en otras plataformas; no se certifica un despliegue
+   con `sslmode=require`. Los wrappers de owner aceptan `require` solo para
+   operaciones administrativas revisadas.
 4. `max instances`, workers Gunicorn, threads que usan DB, concurrencia y
    revisiones activas durante rollout;
 5. límites de timeout de conexión/query/lock y procedimiento de rotación.

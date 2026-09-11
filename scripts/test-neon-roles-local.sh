@@ -67,6 +67,7 @@ printf '[staging_app]\nhost=127.0.0.1\nport=%s\ndbname=neondb\nuser=greeniteso_s
 printf '[staging_migrator]\nhost=127.0.0.1\nport=%s\ndbname=neondb\nuser=greeniteso_staging_migrator\n\n' "$staging_port" >>"$service_file"
 printf '[production_owner]\nhost=127.0.0.1\nport=%s\ndbname=neondb\nuser=neondb_owner\n\n' "$production_port" >>"$service_file"
 printf '[production_app]\nhost=127.0.0.1\nport=%s\ndbname=neondb\nuser=greeniteso_production_app\n\n' "$production_port" >>"$service_file"
+printf '[production_migrator]\nhost=127.0.0.1\nport=%s\ndbname=neondb\nuser=greeniteso_production_migrator\n\n' "$production_port" >>"$service_file"
 printf '[staging_on_production]\nhost=127.0.0.1\nport=%s\ndbname=neondb\nuser=greeniteso_staging_app\n' "$production_port" >>"$service_file"
 printf '[hostaddr_env_bypass]\nhost=branch-label.invalid\nport=%s\ndbname=neondb\nuser=neondb_owner\n\n' "$staging_port" >>"$service_file"
 printf '[hostaddr_service_bypass]\nhost=branch-label.invalid\nhostaddr=127.0.0.1\nport=%s\ndbname=neondb\nuser=neondb_owner\n' "$staging_port" >>"$service_file"
@@ -91,8 +92,11 @@ scripts/neon-role-apply.sh --environment staging --service staging_owner \
   --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$staging_port" --allow-existing-owners --local-test >/dev/null
 scripts/neon-role-apply.sh --environment staging --service staging_owner \
   --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$staging_port" --allow-existing-owners --local-test >/dev/null
-scripts/neon-role-verify.sh --environment staging --service staging_owner \
-  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$staging_port" --local-test >/dev/null
+if scripts/neon-role-verify.sh --environment staging --service staging_owner \
+  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$staging_port" --local-test >/dev/null 2>&1; then
+  printf '%s\n' 'FAIL: verifier accepted a relation still owned by the pre-existing owner' >&2
+  exit 1
+fi
 if scripts/neon-role-verify.sh --environment staging --service staging_app \
   --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$staging_port" --local-test >/dev/null 2>&1; then
   printf '%s\n' 'FAIL: app role executed administrative verification' >&2
@@ -115,6 +119,18 @@ production_membership=$($psql_bin -h 127.0.0.1 -p "$production_port" -U postgres
   "SELECT inherit_option || '|' || set_option || '|' || admin_option FROM pg_auth_members membership JOIN pg_roles member ON member.oid = membership.member JOIN pg_roles granted_role ON granted_role.oid = membership.roleid WHERE member.rolname = 'neondb_owner' AND granted_role.rolname = 'greeniteso_production_migrator';")
 [[ $production_membership == 'true|false|true' ]] || {
   printf 'FAIL: ADMIN TRUE/SET FALSE owner membership was not preserved (%s)\n' "$production_membership" >&2
+  exit 1
+}
+app_idle_timeout=$(PGSERVICEFILE="$service_file" "$psql_bin" -X service=production_app -Atqc \
+  "SELECT current_setting('idle_in_transaction_session_timeout')::interval = interval '60 seconds';")
+[[ $app_idle_timeout == t ]] || {
+  printf 'FAIL: app idle transaction timeout was not 60 seconds (%s)\n' "$app_idle_timeout" >&2
+  exit 1
+}
+migrator_lock_timeout=$(PGSERVICEFILE="$service_file" "$psql_bin" -X service=production_migrator -Atqc \
+  "SELECT current_setting('lock_timeout')::interval = interval '5 seconds';")
+[[ $migrator_lock_timeout == t ]] || {
+  printf 'FAIL: migrator lock timeout was not 5 seconds (%s)\n' "$migrator_lock_timeout" >&2
   exit 1
 }
 

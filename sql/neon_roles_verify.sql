@@ -81,6 +81,28 @@ BEGIN
   IF has_database_privilege(app_role, database_name, 'TEMPORARY') THEN
     RAISE EXCEPTION 'app role retains TEMPORARY database privilege';
   END IF;
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_db_role_setting role_setting
+    JOIN pg_roles role_record ON role_record.oid = role_setting.setrole
+    CROSS JOIN LATERAL unnest(role_setting.setconfig) config
+    WHERE role_setting.setdatabase = (SELECT oid FROM pg_database WHERE datname = database_name)
+      AND role_record.rolname = migrator_role
+      AND config = 'lock_timeout=5s'
+  ) THEN
+    RAISE EXCEPTION 'migrator role must have lock_timeout=5s for this database';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_db_role_setting role_setting
+    JOIN pg_roles role_record ON role_record.oid = role_setting.setrole
+    CROSS JOIN LATERAL unnest(role_setting.setconfig) config
+    WHERE role_setting.setdatabase = (SELECT oid FROM pg_database WHERE datname = database_name)
+      AND role_record.rolname = app_role
+      AND config = 'idle_in_transaction_session_timeout=60s'
+  ) THEN
+    RAISE EXCEPTION 'app role must have idle_in_transaction_session_timeout=60s for this database';
+  END IF;
 
   SELECT EXISTS (
     SELECT 1
@@ -112,6 +134,18 @@ BEGIN
       )
   ) THEN
     RAISE EXCEPTION 'app role has an extra relation privilege or grant option';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_class relation
+    JOIN pg_namespace ns ON ns.oid = relation.relnamespace
+    JOIN pg_roles owner_role ON owner_role.oid = relation.relowner
+    WHERE ns.nspname = schema_name
+      AND relation.relkind IN ('r', 'p', 'v', 'm', 'f', 'S')
+      AND owner_role.rolname <> migrator_role
+  ) THEN
+    RAISE EXCEPTION 'schema has relations not owned by migrator; inventory owners and use an owner-run or approved migration plan before retrying; no ownership transfer was performed';
   END IF;
 
   SELECT bool_and(privilege_type IN ('SELECT', 'INSERT', 'UPDATE', 'DELETE')

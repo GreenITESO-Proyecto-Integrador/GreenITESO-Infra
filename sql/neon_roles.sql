@@ -116,6 +116,14 @@ SELECT format('GRANT TEMPORARY ON DATABASE %I TO %I', :'database_name', :'migrat
 SELECT format('GRANT CONNECT ON DATABASE %I TO %I', :'database_name', :'app_role') \gexec
 SELECT format('GRANT CONNECT ON DATABASE %I TO %I', :'database_name', :'migrator_role') \gexec
 
+-- Drop idle application transactions after one minute. The migrator's
+-- lock_timeout is set below while operating as that role, so a pre-existing
+-- migrator membership need not grant the owner ADMIN over it.
+SELECT format(
+  'ALTER ROLE %I IN DATABASE %I SET idle_in_transaction_session_timeout = %L',
+  :'app_role', :'database_name', '60s'
+) \gexec
+
 -- Existing tables and sequences: the app can perform ordinary Django DML,
 -- including sequence-backed inserts, but cannot create/alter/drop objects.
 SELECT format(
@@ -194,6 +202,10 @@ SELECT NOT EXISTS (
 SELECT format('GRANT %I TO %I WITH SET TRUE', :'migrator_role', current_user)
 WHERE :'owner_needs_migrator_grant' = 't' \gexec
 SET ROLE :'migrator_role';
+SELECT format(
+  'ALTER ROLE %I IN DATABASE %I SET lock_timeout = %L',
+  :'migrator_role', :'database_name', '5s'
+) \gexec
 SELECT format(
   'ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO %I',
   :'schema_name', :'app_role'
