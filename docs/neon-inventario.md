@@ -9,7 +9,7 @@ Verificado: **2026-09-10**, mediante la consola autenticada y Neon CLI **4.16.0*
 | Proyecto | GreenITESO |
 | Project ID | `cool-mouse-83825858` |
 | Organización | `org-twilight-lab-95420626` |
-| Cuenta propietaria | `lramirez.ramos@iteso.mx` |
+| Cuenta propietaria | Cuenta de Fernando Ramos (`luci-efe`); identidad verificada en consola |
 | Dueño de la cuenta / responsable inicial | Fernando Ramos (`luci-efe`), confirmado por él el 2026-09-10 |
 | Responsable suplente | **Pendiente de nombramiento**; no se ha otorgado acceso a otra persona |
 | Base de datos | `neondb` |
