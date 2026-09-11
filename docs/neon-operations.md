@@ -153,21 +153,37 @@ scripts/neon-role-verify.sh --environment staging \
 hostname directo del endpoint de la rama que el inventario verificó; nunca se
 debe copiar una URL con contraseña al comando. La entrada del servicio debe
 contener `sslmode=require` o `verify-full`, no `hostaddr` ni un hostname
-`-pooler`. Para establecer una contraseña
-por primera vez, usar un servicio de owner revisado y el prompt oculto de
-`psql`:
+`-pooler`. Neon exige que el operador proporcione la contraseña en texto plano;
+la recibe por la conexión TLS verificada y la almacena cifrada según su
+[documentación](https://neon.com/docs/manage/roles#manage-roles-with-sql).
+El intento de enviar un verificador SCRAM pre-hasheado fue rechazado por Neon
+(HTTP 400). No usar `psql \password` para inicializar estos roles: ese
+metacomando también puede enviar un verificador pre-hasheado.
 
-```text
-PGSERVICEFILE=/secure/pg_service.conf psql -X service=staging_owner
-\password greeniteso_staging_app
-\password greeniteso_staging_migrator
-\q
-```
+Para una credencial nueva, generar una contraseña fuerte, única y aleatoria en
+el gestor de contraseñas aprobado. Antes de escribirla, como owner/admin y en
+la conexión directa canónica, comprobar que el rol recién creado no tenga
+contraseña (`rolpassword IS NULL` en `pg_authid`, si el servicio autorizado
+permite esa consulta). La comprobación solo sirve para la inicialización; si el
+rol ya tiene contraseña, no rotarla ni borrarlo/recrearlo: detenerse y
+reconciliar el estado con Infra.
 
-Las contraseñas se guardan en el passfile/servicio seguro o Secret Manager y no
-en SQL, shell history, argumentos, logs, Terraform state o GitHub comments.
-Rotar una contraseña es una operación separada y explícita; el bootstrap no la
-realiza por accidente.
+Enviar entonces un `ALTER ROLE ... PASSWORD ...` con un cliente SQL seguro que
+acepte la contraseña plaintext como entrada protegida, o usar el campo de
+contraseña plaintext del flujo de creación/actualización de roles de Neon. La
+entrada debe ir por `sslmode=verify-full` al host directo revisado; el cliente
+no debe poner el valor en argv, shell history, archivos del repositorio, logs,
+Terraform state o comentarios. No se incluye aquí ningún secreto ni ejemplo de
+secreto. Si la respuesta del cliente es incierta, no repetir ni rotar: verificar
+primero el estado del rol y conservar el resultado redacted.
+
+Guardar cada credencial de forma durable y con acceso restringido antes de
+enviarla al servidor, para conservarla si se pierde la respuesta después de un
+COMMIT exitoso. Usar el passfile/servicio seguro o Secret Manager, separar dev
+de staging y verificar después el login de cada rol. El SQL de [sql/neon_roles.sql](../sql/neon_roles.sql) sigue
+siendo idempotente y password-free; no cambia contraseñas en una repetición.
+Rotar una contraseña es una operación separada y explícita, nunca un efecto
+accidental del bootstrap.
 
 ## Verificación local reproducible
 
@@ -289,13 +305,18 @@ pertenece al job migrator y a operaciones de respaldo.
 
 - [x] T3: ramas `dev` y `staging` creadas desde `production`, IDs registrados y
   comandos secret-free reproducibles.
-- [x] T13: SQL/wrappers de roles, default privileges, guardas de destino y
-  verificación local PG18.
+- [ ] T13: grants SQL verificados en tres ramas; credenciales, login y grants
+  post-migración verificados en dev/staging. Faltan production, Secret Manager
+  y la prueba negativa entre ambientes.
 - [ ] T4: inventario GCP, referencias Secret Manager y límites Cloud Run aún
   requieren el responsable de Cloud; no se ejecutó ninguna mutación GCP.
-- [ ] T5/T15: migrations Django y smoke test del servicio aún requieren el
-  esquema/backend y una ventana de staging aprobada.
+- [ ] T5/T15: núcleo migrado y db_smoke correcto en Neon dev/staging desde
+  contenedores locales. Cloud Run, production y pipeline real siguen pendientes.
 
 ## Evidencia cloud parcial
 
-[Roles aplicados y verificados en tres ambientes](evidence/neon-roles-2026-09-11.md). Credenciales iniciales, Secret Manager y autenticación cruzada siguen pendientes; no se aplicó el esquema de dominio.
+[Roles y grants iniciales](evidence/neon-roles-2026-09-11.md) y
+[bootstrap del esquema en dev/staging](evidence/neon-schema-2026-09-11.md).
+Ambos ambientes tienen 21 tablas, 28 migraciones aplicadas y smoke correcto
+con el rol app pooled. Production no recibió credenciales ni migraciones de
+este bootstrap. La evidencia de contenedores locales no certifica Cloud Run.

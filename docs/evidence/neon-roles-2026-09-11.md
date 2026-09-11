@@ -1,14 +1,19 @@
 # Verificación de roles Neon — 2026-09-11
 
+Esta página conserva la secuencia histórica de aplicación de grants. El
+[bootstrap posterior](neon-schema-2026-09-11.md) completó credenciales y esquema
+en dev/staging; sustituye los pendientes de esas dos ramas indicados abajo.
+Production y la prueba negativa entre ambientes siguen pendientes.
+
 Proyecto `cool-mouse-83825858`; base `neondb`; schema `public`. Scripts revisados en commit `9ff8bb7653346f4d256ccee4a890ea8bd77975c0`.
 
-Se ejecutaron `scripts/neon-role-apply.sh` y `scripts/neon-role-verify.sh` con selección explícita de ambiente, pg_service, archivo seguro y host/puerto del inventario. Production requirió además `--allow-production`. Las seis ejecuciones finalizaron con código 0.
+Se ejecutaron `scripts/neon-role-apply.sh` y `scripts/neon-role-verify.sh` con selección explícita de ambiente, pg_service, archivo seguro y host/puerto del inventario. Production requirió además `--allow-production`. Las seis ejecuciones finalizaron con código 0; esto verifica el contrato SQL de grants, no la inicialización de contraseñas ni el login de los roles nuevos.
 
 | Ambiente | App | Migrador | Resultado |
 | --- | --- | --- | --- |
-| dev | greeniteso_dev_app | greeniteso_dev_migrator | Verificado |
-| staging | greeniteso_staging_app | greeniteso_staging_migrator | Verificado |
-| production | greeniteso_production_app | greeniteso_production_migrator | Verificado |
+| dev | greeniteso_dev_app | greeniteso_dev_migrator | Grants verificados; credenciales pendientes |
+| staging | greeniteso_staging_app | greeniteso_staging_migrator | Grants verificados; credenciales pendientes |
+| production | greeniteso_production_app | greeniteso_production_migrator | Grants verificados; fuera de este bootstrap |
 
 En los tres ambientes: LOGIN habilitado, sin SUPERUSER/CREATEDB/CREATEROLE/REPLICATION/BYPASSRLS ni membresías adicionales. App tiene USAGE y no CREATE en public; migrador puede crear. Default privileges verificados para objetos que cree el migrador. El owner original sigue siendo neondb_owner.
 
@@ -20,7 +25,13 @@ Conexión administrativa dev: psql confirmó TLS1.3 y contraseña utilizada. La 
 
 Revisión aplicada: `8ae84f72fa5b3dde783d5135ee7700e3c5cd1aa5`. Inventario de hosts confirmado con Neon CLI, incluyendo el componente de routing `c-4`. Las seis ejecuciones apply/verify volvieron a finalizar con código 0 en dev, staging y production. App ya no tiene TEMPORARY; migrador lo conserva. Los scripts verifican destino canónico, TLS, archivo de servicio privado, permisos y ausencia de grant options adicionales. La prueba local PG18 de los scripts también pasó tras corregir los hosts.
 
-No se cambiaron contraseñas ni se ejecutaron migraciones de dominio. Sigue pendiente validar autenticación real de los nuevos roles y aislamiento entre ambientes después de provisionar las credenciales.
+**Estado histórico previo al bootstrap posterior:** no se cambiaron
+contraseñas ni se ejecutaron migraciones de dominio. Un intento
+posterior de inicializar credenciales con un verificador SCRAM pre-hasheado fue
+rechazado por Neon (HTTP 400: el servicio requiere plaintext); no se debe
+interpretar como bootstrap completado. Sigue pendiente provisionar cada
+credencial por un cliente seguro compatible, validar autenticación real y
+aislamiento entre ambientes.
 
 ## Revisión Fable y límites de transacciones
 
