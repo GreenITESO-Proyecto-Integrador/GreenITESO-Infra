@@ -21,3 +21,7 @@ Conexión administrativa dev: psql confirmó TLS1.3 y contraseña utilizada. La 
 Revisión aplicada: `8ae84f72fa5b3dde783d5135ee7700e3c5cd1aa5`. Inventario de hosts confirmado con Neon CLI, incluyendo el componente de routing `c-4`. Las seis ejecuciones apply/verify volvieron a finalizar con código 0 en dev, staging y production. App ya no tiene TEMPORARY; migrador lo conserva. Los scripts verifican destino canónico, TLS, archivo de servicio privado, permisos y ausencia de grant options adicionales. La prueba local PG18 de los scripts también pasó tras corregir los hosts.
 
 No se cambiaron contraseñas ni se ejecutaron migraciones de dominio. Sigue pendiente validar autenticación real de los nuevos roles y aislamiento entre ambientes después de provisionar las credenciales.
+
+## Revisión Fable y límites de transacciones
+
+Commit `acb73c2e0d3c8311a5d1aea1e36c4f6d6e564f8f`: apply/verify nuevamente correctos (6 ejecuciones, código 0) en dev, staging y production. El verificador rechaza relaciones que no pertenezcan al migrador; el migrador tiene `lock_timeout=5s` y app `idle_in_transaction_session_timeout=60s` por base. La prueba PG18 local comprobó los valores efectivos y preservó los objetos de otro propietario sin transferirlos. No hubo migraciones de dominio ni cambios de contraseñas.
