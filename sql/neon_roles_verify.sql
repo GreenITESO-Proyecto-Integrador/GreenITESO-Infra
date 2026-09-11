@@ -81,8 +81,8 @@ BEGIN
     RAISE EXCEPTION 'table default privileges do not grant exactly the app DML set';
   END IF;
 
-  SELECT bool_and(privilege_type IN ('USAGE', 'SELECT', 'UPDATE'))
-    AND count(*) = 3
+  SELECT bool_and(privilege_type IN ('USAGE', 'SELECT'))
+    AND count(*) = 2
   INTO app_default_sequences
   FROM pg_default_acl d
   JOIN pg_roles owner_role ON owner_role.oid = d.defaclrole

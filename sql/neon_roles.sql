@@ -91,7 +91,7 @@ SELECT format(
   :'schema_name', :'app_role'
 ) \gexec
 SELECT format(
-  'GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA %I TO %I',
+  'GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA %I TO %I',
   :'schema_name', :'app_role'
 ) \gexec
 
@@ -122,7 +122,7 @@ SELECT format(
   :'schema_name', :'app_role'
 ) \gexec
 SELECT format(
-  'ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO %I',
+  'ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT USAGE, SELECT ON SEQUENCES TO %I',
   :'schema_name', :'app_role'
 ) \gexec
 RESET ROLE;
