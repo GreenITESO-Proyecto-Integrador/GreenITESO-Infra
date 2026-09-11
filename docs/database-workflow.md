@@ -92,7 +92,12 @@ confundirse con las ramas Neon. Fusionar Git no fusiona filas de PostgreSQL.
 La promoción ejecuta las migraciones
 revisadas una vez por ambiente con el mismo contenedor de release, usando la
 URL directa y el rol migrador, antes de cambiar tráfico. La aplicación usa la
-URL pooled y un rol runtime restringido.
+URL pooled y un rol runtime restringido. El migrador puede crear objetos nuevos
+y hacer backfills; las tablas preexistentes siguen perteneciendo a su owner.
+Antes de una migration que altere o elimine un objeto existente, la revisión
+debe confirmar explícitamente su owner y autorizar un recorrido owner-run o
+una estrategia de ownership aprobada. El bootstrap de roles no transfiere
+ownership automáticamente.
 
 Los comandos de inspección de Neon siempre son explícitos:
 

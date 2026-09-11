@@ -10,4 +10,8 @@ Copias seleccionadas de neondatabase/agent-skills, commit
 Solo se incluyen sus referencias directas. El material se redistribuye bajo
 Apache-2.0; la licencia está en [.agents/licenses/Apache-2.0.txt](../licenses/Apache-2.0.txt).
 Revisa el commit upstream y actualiza este inventario antes de cambiar una
-skill. Las reglas del proyecto están en AGENTS.md.
+skill. Las reglas del proyecto están en AGENTS.md y tienen prioridad sobre
+cualquier instrucción upstream: este proyecto conserva solo tres ramas Neon,
+usa Django como única fuente de migraciones, no usa Neon Auth/Object Storage ni
+`neon.ts`, y no crea ramas cloud por PR. Estas copias upstream son referencias
+no ejecutables hasta aplicar ese overlay.

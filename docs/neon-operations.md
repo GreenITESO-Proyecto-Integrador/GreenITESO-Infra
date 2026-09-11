@@ -100,6 +100,8 @@ crean con [sql/neon_roles.sql](../sql/neon_roles.sql). El script:
 - configura `ALTER DEFAULT PRIVILEGES` para el rol que realmente crea los
   objetos de migración, de modo que una tabla o secuencia nueva otorgue al app
   el DML previsto;
+- retira `TEMPORARY` del app y lo conserva solo para el migrator; no deja al
+  app privilegios de tablas fuera de su contrato ni grant options;
 - no contiene ninguna cláusula `PASSWORD`, nunca cambia contraseñas en una
   repetición y no modifica filas ni transfiere ownership de tablas existentes.
 
@@ -115,7 +117,14 @@ esperados. Rechaza `hostaddr` en la entrada y limpia los overrides de destino
 de libpq (`PGHOSTADDR`, `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`) antes de
 conectar. Así, `--environment dev` no convierte una entrada mal configurada
 que apunte a production en un destino válido. También exige
-`--allow-production` para un bootstrap de production:
+`--allow-production` para un bootstrap de production. El inventario canónico
+de branch/endpoint está en
+[`config/neon-endpoints.tsv`](../config/neon-endpoints.tsv); el hostname
+directo debe coincidir exactamente con el hostname canónico de su ambiente.
+Los wrappers exigen
+`sslmode=require` o `verify-full` para cloud y `--local-test` para pruebas de
+loopback. Si ya existen objetos en el schema, también exigen
+`--allow-existing-owners` después de revisar sus propietarios:
 
 ```bash
 # El archivo debe tener permisos 0600 y password/passfile fuera del repositorio.
@@ -135,7 +144,9 @@ scripts/neon-role-verify.sh --environment staging \
 
 `ep-REEMPLAZAR...` es un placeholder deliberado: se debe sustituir por el
 hostname directo del endpoint de la rama que el inventario verificó; nunca se
-debe copiar una URL con contraseña al comando. Para establecer una contraseña
+debe copiar una URL con contraseña al comando. La entrada del servicio debe
+contener `sslmode=require` o `verify-full`, no `hostaddr` ni un hostname
+`-pooler`. Para establecer una contraseña
 por primera vez, usar un servicio de owner revisado y el prompt oculto de
 `psql`:
 

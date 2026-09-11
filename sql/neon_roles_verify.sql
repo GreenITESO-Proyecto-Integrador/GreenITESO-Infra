@@ -78,6 +78,9 @@ BEGIN
      OR has_database_privilege(migrator_role, database_name, 'CREATE') THEN
     RAISE EXCEPTION 'an environment role can create databases';
   END IF;
+  IF has_database_privilege(app_role, database_name, 'TEMPORARY') THEN
+    RAISE EXCEPTION 'app role retains TEMPORARY database privilege';
+  END IF;
 
   SELECT EXISTS (
     SELECT 1
@@ -92,7 +95,27 @@ BEGIN
     RAISE EXCEPTION 'PUBLIC retains CREATE on schema %', schema_name;
   END IF;
 
-  SELECT bool_and(privilege_type IN ('SELECT', 'INSERT', 'UPDATE', 'DELETE'))
+  IF EXISTS (
+    SELECT 1
+    FROM pg_class relation
+    JOIN pg_namespace ns ON ns.oid = relation.relnamespace
+    CROSS JOIN LATERAL aclexplode(relation.relacl) acl
+    WHERE ns.nspname = schema_name
+      AND acl.grantee = (SELECT oid FROM pg_roles WHERE rolname = app_role)
+      AND (
+        (relation.relkind IN ('r', 'p', 'v', 'm', 'f')
+         AND (acl.privilege_type NOT IN ('SELECT', 'INSERT', 'UPDATE', 'DELETE')
+              OR acl.is_grantable))
+        OR (relation.relkind = 'S'
+            AND (acl.privilege_type NOT IN ('USAGE', 'SELECT')
+                 OR acl.is_grantable))
+      )
+  ) THEN
+    RAISE EXCEPTION 'app role has an extra relation privilege or grant option';
+  END IF;
+
+  SELECT bool_and(privilege_type IN ('SELECT', 'INSERT', 'UPDATE', 'DELETE')
+                 AND NOT acl.is_grantable)
     AND count(*) = 4
   INTO app_default_tables
   FROM pg_default_acl d
@@ -107,7 +130,8 @@ BEGIN
     RAISE EXCEPTION 'table default privileges do not grant exactly the app DML set';
   END IF;
 
-  SELECT bool_and(privilege_type IN ('USAGE', 'SELECT'))
+  SELECT bool_and(privilege_type IN ('USAGE', 'SELECT')
+                 AND NOT acl.is_grantable)
     AND count(*) = 2
   INTO app_default_sequences
   FROM pg_default_acl d

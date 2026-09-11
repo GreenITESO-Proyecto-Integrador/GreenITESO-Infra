@@ -10,6 +10,7 @@ BEGIN;
 SELECT set_config('greeniteso.target_env', :'target_env', false) AS _target_env,
        set_config('greeniteso.database_name', :'database_name', false) AS _database_name,
        set_config('greeniteso.schema_name', :'schema_name', false) AS _schema_name,
+       set_config('greeniteso.allow_existing_owners', :'allow_existing_owners', false) AS _allow_existing_owners,
        set_config('greeniteso.app_role', :'app_role', false) AS _app_role,
        set_config('greeniteso.migrator_role', :'migrator_role', false) AS _migrator_role
 \gset
@@ -18,6 +19,7 @@ DO $$
 DECLARE
   target_env text := current_setting('greeniteso.target_env');
   database_name text := current_setting('greeniteso.database_name');
+  allow_existing_owners boolean := current_setting('greeniteso.allow_existing_owners')::boolean;
   app_role text := current_setting('greeniteso.app_role');
   migrator_role text := current_setting('greeniteso.migrator_role');
 BEGIN
@@ -29,6 +31,15 @@ BEGIN
   END IF;
   IF current_user IN (app_role, migrator_role) THEN
     RAISE EXCEPTION 'role bootstrap must run as an owner/admin, not an application role';
+  END IF;
+  IF NOT allow_existing_owners AND EXISTS (
+    SELECT 1
+    FROM pg_class relation
+    JOIN pg_namespace ns ON ns.oid = relation.relnamespace
+    WHERE ns.nspname = current_setting('greeniteso.schema_name')
+      AND relation.relkind IN ('r', 'p', 'v', 'm', 'f', 'S')
+  ) THEN
+    RAISE EXCEPTION 'existing schema objects require --allow-existing-owners after an ownership review';
   END IF;
 END
 $$;
@@ -97,6 +108,11 @@ SELECT format('GRANT USAGE, CREATE ON SCHEMA %I TO %I', :'schema_name', :'migrat
 -- Keep database-level CREATE/role creation out of both runtime paths.
 SELECT format('REVOKE CREATE ON DATABASE %I FROM %I', :'database_name', :'app_role') \gexec
 SELECT format('REVOKE CREATE ON DATABASE %I FROM %I', :'database_name', :'migrator_role') \gexec
+-- TEMP is outside the app's DML contract. Keep it for the direct migrator
+-- path if a migration needs temporary tables.
+SELECT format('REVOKE TEMPORARY ON DATABASE %I FROM PUBLIC', :'database_name') \gexec
+SELECT format('REVOKE TEMPORARY ON DATABASE %I FROM %I', :'database_name', :'app_role') \gexec
+SELECT format('GRANT TEMPORARY ON DATABASE %I TO %I', :'database_name', :'migrator_role') \gexec
 SELECT format('GRANT CONNECT ON DATABASE %I TO %I', :'database_name', :'app_role') \gexec
 SELECT format('GRANT CONNECT ON DATABASE %I TO %I', :'database_name', :'migrator_role') \gexec
 
@@ -187,7 +203,9 @@ SELECT format(
   :'schema_name', :'app_role'
 ) \gexec
 RESET ROLE;
-SELECT format('REVOKE %I FROM %I', :'migrator_role', current_user)
+-- A temporary grant adds a row under the current owner as grantor. Scope the
+-- revoke to that grantor so any pre-existing membership row keeps its options.
+SELECT format('REVOKE %I FROM %I GRANTED BY %I', :'migrator_role', current_user, current_user)
 WHERE :'owner_needs_migrator_grant' = 't' \gexec
 
 COMMIT;

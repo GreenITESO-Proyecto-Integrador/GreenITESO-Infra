@@ -1,0 +1,4 @@
+# environment branch_id canonical_endpoint_id canonical_direct_hostname
+dev br-wild-leaf-axhsrol6 ep-lively-brook-ax4n0pys ep-lively-brook-ax4n0pys.us-east-2.aws.neon.tech
+staging br-long-band-axwyo7yx ep-withered-cake-axk8vlfi ep-withered-cake-axk8vlfi.us-east-2.aws.neon.tech
+production br-falling-forest-axgavkxc ep-old-salad-axvsz82z ep-old-salad-axvsz82z.us-east-2.aws.neon.tech

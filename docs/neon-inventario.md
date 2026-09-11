@@ -45,6 +45,7 @@ Verificación del backend: rama predeterminada `dev`, commit [`37e4809baf546d221
 - [Workflows](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/tree/37e4809baf546d22154f51dd5373e42eeefd6464/.github/workflows): `deploy-dev.yml`, `deploy-test.yml`, `deploy-preprod.yml`, `deploy-prod.yml`; `promote.yml` ofrece `test`, `preprod`, `prod`.
 - Git branches remotas: `dev`, `main`, `test`, `preprod`, `prod`. `main` también contiene los cuatro workflows de despliegue.
 - La API de GitHub Environments devuelve `copilot` y `dev`; `copilot` corresponde a tooling y `dev` sigue siendo el único ambiente de aplicación observado. Los branches y workflows antiguos se conservan, pero no demuestran que exista el servicio cloud correspondiente.
+- El mapeo operativo del diagrama vigente es `dev` Git → `dev` Neon, `staging` Git → `staging` Neon y `main` Git → `production` Neon. El pipeline de cuatro etapas antiguo se conserva hasta que se fusione la alineación propuesta.
 - La región Cloud Run se toma de `secrets.GCP_REGION`; no se leyó su valor ni se verificó la región desplegada. Una ejecución verde tampoco prueba despliegue: el workflow puede omitirlo cuando falta configuración.
 - La conexión real de solo lectura con `dev_owner` confirmó `TLSv1.3` mediante `\conninfo`; el fallback nativo IPv6 demoró aproximadamente 30 segundos antes de completar por IPv4.
 

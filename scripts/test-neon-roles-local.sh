@@ -8,6 +8,9 @@ command -v docker >/dev/null 2>&1 || { printf '%s\n' 'docker is required' >&2; e
 psql_bin=${PSQL_BIN:-}
 if [[ -z $psql_bin ]]; then psql_bin=$(command -v psql || true); fi
 [[ -n $psql_bin ]] || { printf '%s\n' 'psql 18 client is required (set PSQL_BIN)' >&2; exit 127; }
+# This script is the explicit local-test mode; keep inherited libpq routing
+# variables from redirecting its direct loopback checks.
+unset PGHOSTADDR PGHOST PGPORT PGDATABASE PGUSER PGSERVICE
 
 suffix="${PPID}_${RANDOM}"
 staging_container="greeniteso-roles-staging-${suffix}"
@@ -67,30 +70,53 @@ printf '[production_app]\nhost=127.0.0.1\nport=%s\ndbname=neondb\nuser=greenites
 printf '[staging_on_production]\nhost=127.0.0.1\nport=%s\ndbname=neondb\nuser=greeniteso_staging_app\n' "$production_port" >>"$service_file"
 printf '[hostaddr_env_bypass]\nhost=branch-label.invalid\nport=%s\ndbname=neondb\nuser=neondb_owner\n\n' "$staging_port" >>"$service_file"
 printf '[hostaddr_service_bypass]\nhost=branch-label.invalid\nhostaddr=127.0.0.1\nport=%s\ndbname=neondb\nuser=neondb_owner\n' "$staging_port" >>"$service_file"
+printf '[cloud_wrong_endpoint]\nhost=ep-old-salad-axvsz82z.us-east-2.aws.neon.tech\nport=5432\ndbname=neondb\nuser=neondb_owner\nsslmode=require\n\n' >>"$service_file"
+printf '[cloud_pooler]\nhost=ep-lively-brook-ax4n0pys-pooler.us-east-2.aws.neon.tech\nport=5432\ndbname=neondb\nuser=neondb_owner\nsslmode=require\n\n' >>"$service_file"
+printf '[cloud_no_tls]\nhost=ep-lively-brook-ax4n0pys.us-east-2.aws.neon.tech\nport=5432\ndbname=neondb\nuser=neondb_owner\nsslmode=disable\n' >>"$service_file"
 
 export PATH="$(dirname "$psql_bin"):$PATH"
+chmod 644 "$service_file"
+if scripts/neon-role-verify.sh --environment staging --service staging_owner \
+  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$staging_port" --local-test >/dev/null 2>&1; then
+  printf '%s\n' 'FAIL: verifier accepted an insecure service file' >&2
+  exit 1
+fi
+chmod 600 "$service_file"
+if scripts/neon-role-apply.sh --environment staging --service staging_owner \
+  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$staging_port" --local-test >/dev/null 2>&1; then
+  printf '%s\n' 'FAIL: existing owner objects bypassed the explicit ownership gate' >&2
+  exit 1
+fi
 scripts/neon-role-apply.sh --environment staging --service staging_owner \
-  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$staging_port" >/dev/null
+  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$staging_port" --allow-existing-owners --local-test >/dev/null
 scripts/neon-role-apply.sh --environment staging --service staging_owner \
-  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$staging_port" >/dev/null
+  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$staging_port" --allow-existing-owners --local-test >/dev/null
 scripts/neon-role-verify.sh --environment staging --service staging_owner \
-  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$staging_port" >/dev/null
+  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$staging_port" --local-test >/dev/null
 if scripts/neon-role-verify.sh --environment staging --service staging_app \
-  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$staging_port" >/dev/null 2>&1; then
+  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$staging_port" --local-test >/dev/null 2>&1; then
   printf '%s\n' 'FAIL: app role executed administrative verification' >&2
   exit 1
 fi
 if scripts/neon-role-verify.sh --environment staging --service staging_owner \
   --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$staging_port" \
-  --database postgres >/dev/null 2>&1; then
+  --database postgres --local-test >/dev/null 2>&1; then
   printf '%s\n' 'FAIL: verifier accepted a mislabeled database' >&2
   exit 1
 fi
+"$psql_bin" -h 127.0.0.1 -p "$production_port" -U postgres -d neondb -v ON_ERROR_STOP=1 \
+  -c 'CREATE ROLE greeniteso_production_migrator LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS; GRANT greeniteso_production_migrator TO neondb_owner WITH INHERIT TRUE, SET FALSE, ADMIN TRUE;' >/dev/null
 scripts/neon-role-apply.sh --environment production --service production_owner \
   --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$production_port" \
-  --allow-production >/dev/null
+  --allow-production --local-test >/dev/null
 scripts/neon-role-verify.sh --environment production --service production_owner \
-  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$production_port" >/dev/null
+  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$production_port" --local-test >/dev/null
+production_membership=$($psql_bin -h 127.0.0.1 -p "$production_port" -U postgres -d neondb -Atqc \
+  "SELECT inherit_option || '|' || set_option || '|' || admin_option FROM pg_auth_members membership JOIN pg_roles member ON member.oid = membership.member JOIN pg_roles granted_role ON granted_role.oid = membership.roleid WHERE member.rolname = 'neondb_owner' AND granted_role.rolname = 'greeniteso_production_migrator';")
+[[ $production_membership == 'true|false|true' ]] || {
+  printf 'FAIL: ADMIN TRUE/SET FALSE owner membership was not preserved (%s)\n' "$production_membership" >&2
+  exit 1
+}
 
 PGSERVICEFILE="$service_file" "$psql_bin" -X service=staging_migrator -v ON_ERROR_STOP=1 \
   -c 'CREATE TABLE role_probe (id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY, payload text NOT NULL);'
@@ -110,6 +136,11 @@ fi
 if PGSERVICEFILE="$service_file" "$psql_bin" -X service=staging_app -v ON_ERROR_STOP=1 \
   -c 'DROP TABLE role_probe;' >/dev/null 2>&1; then
   printf '%s\n' 'FAIL: app role dropped a table' >&2
+  exit 1
+fi
+if PGSERVICEFILE="$service_file" "$psql_bin" -X service=staging_app -v ON_ERROR_STOP=1 \
+  -c 'CREATE TEMP TABLE app_temp_must_fail (id integer);' >/dev/null 2>&1; then
+  printf '%s\n' 'FAIL: app role created a temporary table' >&2
   exit 1
 fi
 if PGSERVICEFILE="$service_file" "$psql_bin" -X service=staging_app -v ON_ERROR_STOP=1 \
@@ -136,6 +167,13 @@ audit_privilege=$("$psql_bin" -h 127.0.0.1 -p "$staging_port" -U postgres -d neo
   printf 'FAIL: unrelated existing table ACL was not preserved (%s)\n' "$audit_privilege" >&2
   exit 1
 }
+"$psql_bin" -h 127.0.0.1 -p "$staging_port" -U postgres -d neondb -v ON_ERROR_STOP=1 \
+  -c 'GRANT REFERENCES ON owner_probe TO greeniteso_staging_app WITH GRANT OPTION;' >/dev/null
+if scripts/neon-role-verify.sh --environment staging --service staging_owner \
+  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$staging_port" --local-test >/dev/null 2>&1; then
+  printf '%s\n' 'FAIL: verifier accepted an extra app relation grant option' >&2
+  exit 1
+fi
 
 # The staging role was never created in the production branch/container, so a
 # staging credential cannot authenticate there. This local trust-auth check
@@ -187,6 +225,21 @@ fi
 if scripts/neon-role-apply.sh --environment staging --service hostaddr_service_bypass \
   --service-file "$service_file" --expected-host branch-label.invalid --expected-port "$staging_port" >/dev/null 2>&1; then
   printf '%s\n' 'FAIL: apply target binding accepted service hostaddr override' >&2
+  exit 1
+fi
+if scripts/neon-role-verify.sh --environment staging --service cloud_wrong_endpoint \
+  --service-file "$service_file" --expected-host ep-old-salad-axvsz82z.us-east-2.aws.neon.tech --expected-port 5432 >/dev/null 2>&1; then
+  printf '%s\n' 'FAIL: cloud verifier accepted a noncanonical staging endpoint' >&2
+  exit 1
+fi
+if scripts/neon-role-verify.sh --environment dev --service cloud_pooler \
+  --service-file "$service_file" --expected-host ep-lively-brook-ax4n0pys-pooler.us-east-2.aws.neon.tech --expected-port 5432 >/dev/null 2>&1; then
+  printf '%s\n' 'FAIL: cloud verifier accepted a pooled endpoint' >&2
+  exit 1
+fi
+if scripts/neon-role-verify.sh --environment dev --service cloud_no_tls \
+  --service-file "$service_file" --expected-host ep-lively-brook-ax4n0pys.us-east-2.aws.neon.tech --expected-port 5432 >/dev/null 2>&1; then
+  printf '%s\n' 'FAIL: cloud verifier accepted a non-TLS endpoint' >&2
   exit 1
 fi
 
