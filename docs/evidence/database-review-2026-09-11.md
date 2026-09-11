@@ -14,3 +14,11 @@ Correcciones verificadas:
 Validación conjunta local: 41 tests backend +17 pipeline, Ruff/format correctos, Pylint10.00. Imagen runtime construida y comprobada. PRs Backend29–34 e Infra18 contienen evidencia detallada; no se fusionaron ni desplegaron.
 
 Pendientes reales: configuración GCP/IAM/secretos, autenticación de roles y prueba cruzada de ambientes, aprobación del esquema/catálogo, recuperación histórica y aceptación HTTP/CloudRun. Observaciones menores conservadas para E2/limpieza posterior: política de normalización de email y separación de dependencias Python de desarrollo. El seed conserva cambios locales intencionalmente; no debe recalcularlos automáticamente al repetirlo.
+
+## Seguimiento de PRs y autenticación local
+
+Fable 5.1 revisó los siete PRs contra sus bases y sus hashes publicados. Confirmó que Backend29 e Infra18 están técnicamente listos y mantuvo los borradores sujetos a decisiones/configuración. Señaló el CA default del flujo operador de recuperación; corregido con regresión en Backend29 (`821ff7e860896741d88429f28672d684dfea1764`, 14 tests reproducidos).
+
+La nueva prueba SCRAM de Infra (`0c8e7a5043d0d0a05df63670c03a0cc8fad725d4`) se reprodujo independientemente: identidades app/migrador en dos catálogos PG18, DML, rechazo de DDL y errores específicos de autenticación para contraseña equivocada y credencial del otro ambiente. Es evidencia local; los roles reales de Neon siguen pendientes de contraseñas iniciales y autenticación.
+
+GitHub staging/production creados y verificados con ramas permitidas staging/main y Fernando como revisor de production. GCP e IAM no fueron provisionados.
