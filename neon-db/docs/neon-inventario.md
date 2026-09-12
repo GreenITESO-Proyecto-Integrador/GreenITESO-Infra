@@ -62,7 +62,7 @@ neon login
 neon link --project-id cool-mouse-83825858 --branch production --context-file .neon --no-env-pull -y
 ```
 
-Ejecutar desde la raíz de Infra. `--context-file .neon` evita reutilizar contexto en un directorio padre. **`--no-env-pull` es deliberado:** la versión actual descarga variables como `DATABASE_URL` por defecto; el inventario no necesita contraseñas. No usar `--no-checks`: esta vinculación fue validada contra la API.
+Ejecutar desde `neon-db/` (no la raíz de Infra: el Terraform de GCP vive en la raíz desde 2026-09-11). `--context-file .neon` evita reutilizar contexto en un directorio padre. **`--no-env-pull` es deliberado:** la versión actual descarga variables como `DATABASE_URL` por defecto; el inventario no necesita contraseñas. No usar `--no-checks`: esta vinculación fue validada contra la API.
 
 `production` aquí es un destino explícito para vinculación y lectura del inventario; no autoriza cambios de esquema o datos. Los comandos dirigidos a una rama deben llevar proyecto y rama explícitos, aunque exista contexto local. Los listados de inventario a nivel proyecto llevan el Project ID.
 

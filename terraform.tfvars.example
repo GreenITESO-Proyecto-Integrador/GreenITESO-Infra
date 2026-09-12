@@ -1,0 +1,23 @@
+# Copy to terraform.tfvars (gitignored) and fill in once a GCP project
+# exists. No real project ID, image, or account exists yet — do not invent
+# one here.
+
+project_id      = "REPLACE-with-real-gcp-project-id"
+region          = "northamerica-south1"
+environment     = "dev" # dev | staging | production
+app_name        = "greeniteso"
+container_image = "REPLACE-region-docker.pkg.dev/REPLACE-project/REPLACE-repo/greeniteso:latest"
+
+# Leave false: the real database is Neon, not Cloud SQL. See neon-db/docs/.
+enable_cloud_sql = false
+
+# Leave null until a domain is owned and DNS is delegated to this project.
+domain = null
+
+github_repository             = "GreenITESO-Proyecto-Integrador/GreenITESO-Backend"
+monitoring_notification_email = null
+
+labels = {
+  project = "greeniteso"
+  env     = "dev"
+}
