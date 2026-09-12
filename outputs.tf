@@ -20,11 +20,6 @@ output "email_sender_service_account_email" {
   value = google_service_account.email_sender.email
 }
 
-output "cloud_sql_connection_name" {
-  description = "Null unless var.enable_cloud_sql is true (the project's actual database is Neon, see neon-db/)."
-  value       = module.database.connection_name
-}
-
 output "delivery_pipeline_id" {
   value = module.cicd.delivery_pipeline_id
 }

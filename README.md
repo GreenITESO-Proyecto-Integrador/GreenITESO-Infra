@@ -13,7 +13,7 @@ Summary:
 
 - **Edge**: HTTPS load balancer → Cloud Armor → Cloud CDN → Cloud Run
 - **Compute**: Cloud Run runs the fullstack app container
-- **Persistence**: the diagram shows Cloud SQL, but **the actual database is Neon Postgres** (external to GCP) — see [`neon-db/docs/neon-inventario.md`](neon-db/docs/neon-inventario.md). `modules/database` (Cloud SQL) exists only for shape parity with the diagram and is off by default (`enable_cloud_sql = false`). Cloud Storage is real and used for private object evidence (proposal P1).
+- **Persistence**: the diagram shows Cloud SQL, but **the actual database is Neon Postgres** (external to GCP) — see [`neon-db/docs/neon-inventario.md`](neon-db/docs/neon-inventario.md). There is no Cloud SQL module here; Neon's branch-per-environment model fits `dev`/`preprod`/`prod` better than separate always-on Cloud SQL instances would. Cloud Storage is real and used for private object evidence (proposal P1).
 - **CI/CD & observability**: GitHub → Cloud Build → Cloud Deploy promotes to Cloud Run; Cloud Monitoring pings the load balancer every minute.
 - **Third-party**: Firebase Authentication (OIDC/JWT) is the agreed auth provider — it's not provisioned here, it's external. An email-sender service account is scaffolded for whatever transactional email provider gets chosen later.
 
@@ -28,7 +28,6 @@ terraform.tfvars.example     # copy to terraform.tfvars (gitignored) and fill in
 modules/
   network/       # ALB, Cloud Armor, Cloud CDN, serverless NEG
   compute/       # Cloud Run service + runtime service account
-  database/      # Cloud SQL (disabled by default — see Persistence above)
   storage/       # Cloud Storage bucket (private object evidence, P1)
   cicd/          # Cloud Build trigger + Cloud Deploy pipeline/target
   monitoring/    # Uptime check (1 min) + alert policy

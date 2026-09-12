@@ -4,10 +4,9 @@
 #
 # Persistence: the database is Neon Postgres (external to GCP), reached from
 # Cloud Run via Secret Manager references — see modules/compute and
-# neon-db/docs/neon-operations.md. modules/database (Cloud SQL) exists only
-# for parity with the reference architecture diagram and stays off
-# (var.enable_cloud_sql = false) unless the team deliberately decides to
-# move off Neon.
+# neon-db/docs/neon-operations.md. There is deliberately no Cloud SQL module:
+# Neon's branch-per-environment model fits dev/preprod/prod better than
+# separate always-on Cloud SQL instances would.
 #
 # Auth: Firebase Authentication (OIDC/JWT) is the agreed provider per
 # neon-db/AGENTS.md. It is not provisioned by this Terraform — Firebase
@@ -22,17 +21,6 @@ module "storage" {
   environment = var.environment
   location    = var.gcs_bucket_location
   labels      = var.labels
-}
-
-module "database" {
-  source = "./modules/database"
-
-  project_id       = var.project_id
-  region           = var.region
-  app_name         = var.app_name
-  environment      = var.environment
-  enable_cloud_sql = var.enable_cloud_sql
-  labels           = var.labels
 }
 
 # Service account used only to send transactional email (the "Email Service

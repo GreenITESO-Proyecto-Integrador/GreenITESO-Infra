@@ -53,20 +53,6 @@ variable "cloud_run_max_instances" {
   default     = 4
 }
 
-variable "enable_cloud_sql" {
-  description = <<-EOT
-    Whether to provision Cloud SQL. The architecture diagram this scaffold
-    follows shows Cloud SQL as the persistence layer, but the project's
-    actual database decision (see neon-db/docs/neon-inventario.md) is Neon
-    Postgres, reached directly from Cloud Run over the pooled/direct
-    connection strings — not Cloud SQL. Defaults to false so `terraform
-    apply` never provisions a second, unused Postgres instance by accident.
-    Flip this only if the team deliberately decides to move off Neon.
-  EOT
-  type        = bool
-  default     = false
-}
-
 variable "gcs_bucket_location" {
   description = "Location for the Cloud Storage bucket (object/evidence storage per proposal P1)."
   type        = string

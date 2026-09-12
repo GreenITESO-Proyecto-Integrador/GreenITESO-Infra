@@ -8,9 +8,6 @@ environment     = "dev" # dev | staging | production
 app_name        = "greeniteso"
 container_image = "REPLACE-region-docker.pkg.dev/REPLACE-project/REPLACE-repo/greeniteso:latest"
 
-# Leave false: the real database is Neon, not Cloud SQL. See neon-db/docs/.
-enable_cloud_sql = false
-
 # Leave null until a domain is owned and DNS is delegated to this project.
 domain = null
 
