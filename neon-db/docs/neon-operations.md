@@ -317,7 +317,8 @@ pertenece al job migrator y a operaciones de respaldo.
 
 [Roles y grants iniciales](evidence/neon-roles-2026-09-11.md) y
 [bootstrap del esquema en dev/staging](evidence/neon-schema-2026-09-11.md).
-Ambos ambientes tienen 21 tablas, 28 migraciones aplicadas y smoke correcto
+Tras el renombre posterior, ambos ambientes tienen 21 tablas, 31 migraciones
+aplicadas y smoke correcto
 con el rol app pooled. Production no recibió credenciales ni migraciones de
 este bootstrap. La evidencia de contenedores locales no certifica Cloud Run.
 
