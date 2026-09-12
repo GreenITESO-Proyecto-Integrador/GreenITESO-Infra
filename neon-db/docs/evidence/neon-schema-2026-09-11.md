@@ -1,5 +1,9 @@
 # Bootstrap del núcleo en Neon — 2026-09-11
 
+Inventario histórico previo al [renombre posterior de tablas](domain-table-names-2026-09-12.md).
+Dev/staging conservan 21 tablas y ahora registran 31 migraciones; consultar esa
+evidencia para los nombres canónicos. El listado original se conserva abajo.
+
 Operador: Fernando Ramos mediante el orquestador. Alcance ejecutado: `dev` y
 `staging`; **production no recibió contraseñas ni migraciones en este bootstrap**.
 Proyecto `cool-mouse-83825858`, base `neondb`, PostgreSQL18.
