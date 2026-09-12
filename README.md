@@ -7,7 +7,9 @@ This repo has two parts:
 
 ## Architecture
 
-`GCP Architecture.png` is the reference diagram. Summary:
+![GCP reference architecture](./GCP%20Architecture.png)
+
+Summary:
 
 - **Edge**: HTTPS load balancer → Cloud Armor → Cloud CDN → Cloud Run
 - **Compute**: Cloud Run runs the fullstack app container
