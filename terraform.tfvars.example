@@ -1,6 +1,6 @@
 # Copy to terraform.tfvars (gitignored) and fill in once a GCP project
-# exists. No real project ID, image, or account exists yet — do not invent
-# one here.
+# is available. No verified project ID or image is configured here — do not
+# invent one.
 
 project_id      = "REPLACE-with-real-gcp-project-id"
 region          = "northamerica-south1"

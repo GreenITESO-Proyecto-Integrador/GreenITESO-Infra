@@ -69,7 +69,8 @@ module "cicd" {
   github_repository      = var.github_repository
   github_trigger_enabled = var.github_trigger_enabled
   # var.environment (dev/staging/production) names the Neon branch and this
-  # GCP environment; the legacy Git branch prod is intentionally not a target.
+  # GCP environment; dev/preprod/main is the target Git mapping. The separate
+  # legacy prod workflow must remain disabled until it has the migration gate.
   trigger_branch = var.environment == "production" ? "main" : var.environment == "staging" ? "preprod" : "dev"
 }
 

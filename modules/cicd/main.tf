@@ -1,8 +1,6 @@
-# Cloud Build builds the image on push; Cloud Deploy promotes it to the
-# Cloud Run target for this environment. This is separate from each app
-# repo's own GitHub Actions CI (lint/tests/promote-PR gating) — those still
-# decide *whether* code is good; this decides how an approved build actually
-# reaches Cloud Run.
+# Optional alternative release path; the trigger is disabled by default. Do not
+# enable Cloud Build until it invokes the canonical database migration gate.
+# Cloud Deploy still requires an audited image and an approved release policy.
 
 resource "google_cloudbuild_trigger" "build" {
   count       = var.github_trigger_enabled && var.github_repository != null ? 1 : 0

@@ -112,9 +112,11 @@ imprime en la terminal ni se pega en la documentación.
 No se ejecuta `neon env pull` durante onboarding. Las tareas operativas que
 necesiten CLI deben identificar proyecto y rama y usar `--no-env-pull` cuando
 esa opción exista en la versión instalada. No hay `neon.ts`, Neon Auth,
-Neon Object Storage ni ramas automáticas por PR: la autenticación acordada es
-Microsoft Entra ID es la autenticación implementada por Backend; GCS privado
-es la propuesta P1 pendiente de integración.
+Neon Object Storage ni ramas automáticas por PR. Microsoft Entra ID se fusionó
+en Backend `dev` el 2026-09-22 (PR
+[#93](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/pull/93));
+el runtime desplegado no está verificado. GCS privado es la propuesta P1
+pendiente de integración.
 
 ## Si aparece un conflicto
 
