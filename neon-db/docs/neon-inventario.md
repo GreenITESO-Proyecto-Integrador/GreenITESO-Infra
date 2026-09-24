@@ -94,7 +94,7 @@ Fuentes del proveedor: [paquete oficial](https://www.npmjs.com/package/neon/v/4.
 - El CLI almacena credenciales en `~/.config/neon/credentials.json`, fuera del repositorio; permisos verificados **0600** (`-rw-------`). No copiar ese archivo al repo, tickets o logs.
 - `.neon` contiene IDs/contexto, no tokens. Se mantiene ignorado para evitar que el contexto local predeterminado de production se propague a otros checkouts.
 - `.gitignore` excluye `.neon`, sus variantes, `.env`, `.env.*`, archivos de credenciales y `node_modules`; permite `.env.example` sin secretos.
-- Las conexiones SQL actuales se obtuvieron directamente desde Neon CLI y se usaron solo en procesos efímeros; no se descargaron a archivos ni se registraron en logs/issues. Los roles `greeniteso_{dev,staging,production}_{app,migrator}` están enumerados en Neon. App/migrator se validaron en dev/staging; producción no tiene credenciales verificadas. No se configuraron GitHub secrets.
+- Las conexiones SQL actuales se obtuvieron directamente desde Neon CLI y se usaron solo en procesos efímeros; no se descargaron a archivos ni se registraron en logs/issues. Los roles `greeniteso_{dev,staging,production}_{app,migrator}` están enumerados en Neon. App/migrator se validaron en dev/staging, y la credencial app de cada uno fue rechazada al probarla contra el otro ambiente; producción no tiene credenciales verificadas. No se configuraron GitHub secrets.
 - **Los desarrolladores y CI local no necesitan Neon CLI ni login.** T7 usará PostgreSQL 18 local. `neon init`, `neon skills`, `neon mcp` y Neon Auth no son prerrequisitos; T2 fue retirado y la autenticación elegida es Firebase.
 
 ## Verificación reproducible, solo lectura
