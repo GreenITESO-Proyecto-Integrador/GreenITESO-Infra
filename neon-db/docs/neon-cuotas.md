@@ -20,6 +20,14 @@ Proyecto `cool-mouse-83825858`, plan **Free v3**, región AWS Ohio (`aws-us-east
 
 Al **2026-09-24 10:09 UTC**, la API reportó `synthetic_storage_size=33,783,808` bytes (~32.2 MiB), `data_transfer_bytes=1,859,723`, `active_time_seconds=22,996`, `compute_time_seconds=6,092` y `written_data_bytes=0`. Son contadores API del periodo, no mediciones de latencia ni una proyección; las verificaciones aumentan actividad y transferencia. El periodo reportado termina el **2026-10-01 00:00 UTC**. La organización permite 10 ramas y el proyecto usa 3 (`dev`, `staging`, `production`); el límite lógico del proyecto es 512 MiB. El proyecto confirma `subscription_type=free_v3`; Neon documenta la protección de ramas como función de plan pago, por lo que habilitarla requiere aprobación de presupuesto. El dashboard puede redondear el uso y retrasar las métricas.
 
+La API devuelve `suspend_timeout_seconds=0` en los ajustes por defecto del
+proyecto y en los tres endpoints. No interpretarlo como «nunca suspender»: los
+pares más recientes `last_active`/`suspended_at` muestran suspensión entre
+302 y 321 segundos después de la última actividad, compatible con los cinco
+minutos por defecto que documenta Neon. La semántica exacta del cero no queda
+establecida por esos campos; si se necesita un timeout personalizado, verificar
+su valor efectivo con Neon antes de configurarlo.
+
 Fuentes consultadas: [consola autenticada](https://console.neon.tech/app/projects/cool-mouse-83825858), [anuncio oficial de Neon Backend GA y límites del plan gratuito](https://neon.com/blog/neon-backend-is-ga), [precios vigentes](https://neon.com/pricing), [planes y comportamiento al agotar cuotas](https://neon.com/docs/introduction/plans), [scale to zero](https://neon.com/docs/introduction/scale-to-zero), y [Neon snapshots: recovery points](https://neon.com/blog/three-ways-to-use-your-snapshots). No usar cifras de artículos antiguos para configurar el presupuesto.
 
 ## Estimación de cómputo: tres ambientes
