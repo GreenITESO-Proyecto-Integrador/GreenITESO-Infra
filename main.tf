@@ -5,8 +5,7 @@
 # Persistence: the database is Neon Postgres (external to GCP), reached from
 # Cloud Run via Secret Manager references — see modules/compute and
 # neon-db/docs/neon-operations.md. There is deliberately no Cloud SQL module:
-# Neon's branch-per-environment model fits dev/preprod/prod better than
-# separate always-on Cloud SQL instances would.
+# Git dev/preprod/main maps to Neon dev/staging/production.
 #
 # Auth: Firebase Authentication (OIDC/JWT) is the agreed provider per
 # neon-db/AGENTS.md. It is not provisioned by this Terraform — Firebase
@@ -71,10 +70,9 @@ module "cicd" {
   environment       = var.environment
   github_repository = var.github_repository
   # var.environment (dev/staging/production) names the Neon branch and this
-  # GCP environment; the app repos' Git/promote branches are dev/preprod/prod
-  # (see GreenITESO-Backend & GreenITESO-Frontend .github/workflows/promote.yml).
-  # This is the one place that naming mismatch gets bridged.
-  trigger_branch = var.environment == "production" ? "prod" : var.environment == "staging" ? "preprod" : "dev"
+  # GCP environment; Git release branches are dev/preprod/main. The legacy
+  # Git branch prod is retained but is not a release target.
+  trigger_branch = var.environment == "production" ? "main" : var.environment == "staging" ? "preprod" : "dev"
 }
 
 module "monitoring" {

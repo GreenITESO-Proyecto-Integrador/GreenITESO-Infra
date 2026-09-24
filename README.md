@@ -13,7 +13,7 @@ Summary:
 
 - **Edge**: HTTPS load balancer → Cloud Armor → Cloud CDN → Cloud Run
 - **Compute**: Cloud Run runs the fullstack app container
-- **Persistence**: the diagram shows Cloud SQL, but **the actual database is Neon Postgres** (external to GCP) — see [`neon-db/docs/neon-inventario.md`](neon-db/docs/neon-inventario.md). There is no Cloud SQL module here; Neon's branch-per-environment model fits `dev`/`preprod`/`prod` better than separate always-on Cloud SQL instances would. Cloud Storage is real and used for private object evidence (proposal P1).
+- **Persistence**: the diagram shows Cloud SQL, but **the actual database is Neon Postgres** (external to GCP) — see [`neon-db/docs/neon-inventario.md`](neon-db/docs/neon-inventario.md). There is no Cloud SQL module here; Git `dev`/`preprod`/`main` maps to Neon `dev`/`staging`/`production`. Cloud Storage is real and used for private object evidence (proposal P1).
 - **CI/CD & observability**: GitHub → Cloud Build → Cloud Deploy promotes to Cloud Run; Cloud Monitoring pings the load balancer every minute.
 - **Third-party**: Firebase Authentication (OIDC/JWT) is the agreed auth provider — it's not provisioned here, it's external. An email-sender service account is scaffolded for whatever transactional email provider gets chosen later.
 
@@ -33,7 +33,7 @@ modules/
   monitoring/    # Uptime check (1 min) + alert policy
 ```
 
-Run this scaffold once **per environment** (`dev`, `staging`, `production`), each with its own `terraform.tfvars` and state backend — `main.tf` does not fan out to all three by itself. `environment` here matches the Neon branch / Cloud Run service naming (`greeniteso-dev/staging/prod`); the app repos' Git promote-pipeline branches are named `dev`/`preprod`/`prod` — `modules/cicd`'s `trigger_branch` bridges that naming difference (see the comment in `main.tf`).
+Run this scaffold once **per environment** (`dev`, `staging`, `production`), each with its own `terraform.tfvars` and state backend — `main.tf` does not fan out to all three by itself. The environment value matches the Neon branch and Cloud Run service name (`greeniteso-dev`, `greeniteso-staging`, `greeniteso-production`); the corresponding Git release branches are `dev`, `preprod`, and `main`. The legacy Git `prod` branch is retained but is not a release target.
 
 ## Status
 

@@ -21,6 +21,6 @@ variable "github_repository" {
 }
 
 variable "trigger_branch" {
-  description = "Git branch that triggers a build for this environment (should match the app repo's promote-pipeline branch: dev, preprod, or prod)."
+  description = "Git branch that triggers a build for this environment (dev, preprod, or main)."
   type        = string
 }
