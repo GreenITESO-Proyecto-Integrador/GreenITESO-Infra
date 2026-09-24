@@ -9,8 +9,8 @@ Este overlay tiene prioridad sobre las skills upstream:
   rama explícitos. No se debe descargar entorno durante onboarding; usa
   --no-env-pull cuando la versión instalada lo soporte.
 - Django migrations es la única fuente del esquema. No se agrega neon.ts ni
-  Neon Auth/Object Storage. Firebase es el proveedor acordado y GCS privado
-  es la propuesta P1 pendiente de integración.
+  Neon Auth/Object Storage. Microsoft Entra ID es el proveedor de autenticación
+  implementado por Backend; GCS privado es la propuesta P1 pendiente.
 - La aplicación usa conexión pooled; el job migrador usa conexión directa y se
   ejecuta una sola vez por release.
 - No se resetea staging/production para resolver conflictos de migraciones.

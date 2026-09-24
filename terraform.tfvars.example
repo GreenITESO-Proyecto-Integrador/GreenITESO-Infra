@@ -11,7 +11,10 @@ container_image = "REPLACE-region-docker.pkg.dev/REPLACE-project/REPLACE-repo/gr
 # Leave null until a domain is owned and DNS is delegated to this project.
 domain = null
 
-github_repository             = "GreenITESO-Proyecto-Integrador/GreenITESO-Backend"
+# Keep null: this Cloud Build/Cloud Deploy scaffold has no migration gate and
+# must not create a second application release path yet.
+github_repository             = null
+github_trigger_enabled        = false
 monitoring_notification_email = null
 
 labels = {

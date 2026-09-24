@@ -71,6 +71,12 @@ variable "github_repository" {
   default     = null
 }
 
+variable "github_trigger_enabled" {
+  description = "Keep false until Cloud Build uses the canonical migration-gated release path."
+  type        = bool
+  default     = false
+}
+
 variable "monitoring_notification_email" {
   description = "Email address for Cloud Monitoring alert notifications. Leave null to skip creating a notification channel."
   type        = string

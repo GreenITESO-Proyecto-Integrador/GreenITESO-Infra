@@ -113,7 +113,8 @@ No se ejecuta `neon env pull` durante onboarding. Las tareas operativas que
 necesiten CLI deben identificar proyecto y rama y usar `--no-env-pull` cuando
 esa opción exista en la versión instalada. No hay `neon.ts`, Neon Auth,
 Neon Object Storage ni ramas automáticas por PR: la autenticación acordada es
-Firebase y GCS privado es la propuesta P1 pendiente de integración.
+Microsoft Entra ID es la autenticación implementada por Backend; GCS privado
+es la propuesta P1 pendiente de integración.
 
 ## Si aparece un conflicto
 

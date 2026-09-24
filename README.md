@@ -14,8 +14,8 @@ Summary:
 - **Edge**: HTTPS load balancer → Cloud Armor → Cloud CDN → Cloud Run
 - **Compute**: Cloud Run runs the fullstack app container
 - **Persistence**: the diagram shows Cloud SQL, but **the actual database is Neon Postgres** (external to GCP) — see [`neon-db/docs/neon-inventario.md`](neon-db/docs/neon-inventario.md). There is no Cloud SQL module here; Git `dev`/`preprod`/`main` maps to Neon `dev`/`staging`/`production`. Cloud Storage is real and used for private object evidence (proposal P1).
-- **CI/CD & observability**: GitHub → Cloud Build → Cloud Deploy promotes to Cloud Run; Cloud Monitoring pings the load balancer every minute.
-- **Third-party**: Firebase Authentication (OIDC/JWT) is the agreed auth provider — it's not provisioned here, it's external. An email-sender service account is scaffolded for whatever transactional email provider gets chosen later.
+- **CI/CD & observability**: GitHub Actions is the intended release path because its gate runs committed database migrations before the Cloud Run revision. The Terraform Cloud Build/Cloud Deploy GitHub trigger is disabled by default (`github_trigger_enabled = false`) until it invokes the same migration gate. Cloud Monitoring pings the load balancer every minute.
+- **Third-party**: Microsoft Entra ID is the agreed authentication provider — it is external and not provisioned here. An email-sender service account is scaffolded for whatever transactional email provider gets chosen later.
 
 ## Layout
 

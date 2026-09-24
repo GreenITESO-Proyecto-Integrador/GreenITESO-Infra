@@ -7,30 +7,19 @@ Verificado: **2026-09-24**, mediante Neon CLI **4.16.0**, conexiones PostgreSQL 
 | Campo | Valor verificado |
 | --- | --- |
 | Proyecto | GreenITESO |
-| Project ID | `cool-mouse-83825858` |
-| Organización | `org-twilight-lab-95420626` |
-| Cuenta propietaria | Cuenta de Neon de la organización (correo omitido del repositorio público) |
-| Dueño de la cuenta / responsable inicial | Fernando Ramos (`luci-efe`), confirmado por él el 2026-09-10 |
-| Responsable suplente | **Pendiente de nombramiento**; no se ha otorgado acceso a otra persona |
+| Identificadores de proyecto / organización | Se conservan en el registro interno de operadores; no se publican aquí |
+| Cuenta propietaria / responsable | Cuenta gestionada por la organización; suplente **pendiente de nombramiento** |
 | Base de datos | `neondb` |
-| Propietario SQL actual | `neondb_owner`; los roles app/migrator por ambiente existen en Neon |
+| Roles SQL | Roles separados de aplicación y migración por ambiente; los nombres se conservan en el gestor seguro |
 | PostgreSQL | **18** |
 | Región | `aws-us-east-2` — AWS US East 2 (Ohio) |
-| Ramas | `production` (predeterminada, `br-falling-forest-axgavkxc`), `staging` (`br-long-band-axwyo7yx`), `dev` (`br-wild-leaf-axhsrol6`) |
-| Compute de production | `ep-old-salad-axvsz82z`, read-write, observado `idle`, rango 0.25–2 CU |
+| Ramas | `production` (predeterminada), `staging`, `dev`; identificadores omitidos |
+| Compute de production | Endpoint y capacidad verificados; identificadores y estado operativo omitidos |
 | Suspensión | API: `suspend_timeout_seconds=0`, que significa usar el valor global; Free usa 5 minutos de inactividad |
 | Retención configurada | `21600` segundos = 6 horas |
-| Snapshots de backup | Ninguno manual; sin schedule en `production`, `staging` o `dev`, verificado el 2026-09-24 |
-| Tamaño lógico reportado por API | 33,660,928 bytes (aprox. 32.1 MiB, campo `synthetic_storage_size`); no equivale a filas de aplicación ni a una medición de carga del piloto |
+| Backups y restauración | La aceptación requiere verificar retención y completar un ejercicio de restauración; los detalles se mantienen en el registro interno |
 | Ramas incluidas / límite de cuenta | 3 / 10; no crear ramas por PR |
-| Periodo de consumo reportado por API | 2026-09-08 13:36:31 UTC → 2026-10-01 00:00:00 UTC |
-
-La API reportó `active_time_seconds=18,700`, `compute_time_seconds=4,890`,
-`data_transfer_bytes=1,747,483` y `written_data_bytes=0` al 2026-09-24
-06:38 UTC. Son contadores del periodo, no latencias ni evidencia de carga de
-la aplicación. Las conexiones de inspección y smoke incrementan actividad.
-
-Fuentes: [consola del proyecto](https://console.neon.tech/app/projects/cool-mouse-83825858), [ramas](https://console.neon.tech/app/projects/cool-mouse-83825858/branches), consultas verificadas abajo. La consola redondea el uso a 0 y advierte retrasos en métricas; eso no implica almacenamiento vacío.
+Fuente: consola y API oficial de Neon, consultadas el 2026-09-24. Los identificadores de cuenta, proyecto, rama y endpoint quedan en el inventario privado de operadores.
 
 ## Mapeo de ambientes y estado vigente de CI/CD
 
@@ -38,13 +27,13 @@ Fernando ratificó el **2026-09-10** mantener tres ambientes. El mapeo objetivo 
 
 | Ambiente | Git / GitHub Environment | Rama Neon | Estado verificado |
 | --- | --- | --- | --- |
-| Desarrollo | `dev` / `dev` | `dev` | Lista; ID `br-wild-leaf-axhsrol6`; endpoint `ep-lively-brook-ax4n0pys` |
-| Preproducción | `preprod` / `preprod` | `staging` | Lista; ID `br-long-band-axwyo7yx`; endpoint `ep-withered-cake-axk8vlfi` |
-| Producción | `main` / `production` | `production` | Rama primaria; ID `br-falling-forest-axgavkxc`; endpoint `ep-old-salad-axvsz82z`; protección Neon actualmente desactivada |
+| Desarrollo | `dev` / `dev` | `dev` | Rama presente; configuración verificada de forma privada |
+| Preproducción | `preprod` / `preprod` | `staging` | Rama presente; configuración verificada de forma privada |
+| Producción | `main` / `production` | `production` | Rama primaria; la protección y los datos de acceso se verifican antes del corte |
 
 **Desarrollo local** significa PostgreSQL en devcontainer, no la rama cloud `dev`.
 
-T3 creó `staging` y `dev` el **2026-09-11** con `--project-id cool-mouse-83825858`, `--parent production`, `--cu 0.25-1` y `--no-secrets`. No se configuró expiración. El proyecto tiene únicamente esas tres ramas: los previews por PR deben usar PostgreSQL efímero de CI, no ramas Neon.
+T3 creó `staging` y `dev` el **2026-09-11** desde `production` sin copiar secretos. No se configuró expiración. El proyecto tiene únicamente esas tres ramas: los previews por PR deben usar PostgreSQL efímero de CI, no ramas Neon.
 
 Verificación del Backend: la rama predeterminada remota es `dev` (commit
 `7395cf7252543536091301eefde80f2297c3dab0`); también existen Git `preprod` y
@@ -52,17 +41,12 @@ Verificación del Backend: la rama predeterminada remota es `dev` (commit
 cambio de corte aprobado. Neon no recibe automáticamente una rama Git ni un
 `push` al actual `prod` por esta propuesta.
 
-- GitHub Environments observados: `dev`, `preprod`, `production`, y duplicados heredados `staging`/`copilot`. Production exige aprobación de `luci-efe` y permite Git `main`. El environment `staging` permite Git `staging` y no se usa para el mapeo acordado.
-- Las reglas `dev` y `preprod` ahora requieren el check GitHub Actions `test`; `preprod` conserva `Enforce promotion chain` y requiere ramas actualizadas. Se mantienen los requisitos de PR/revisión existentes. Git `prod` y su protección no se cambiaron.
-- GitHub no muestra secretos Neon/GCP en los environments `dev`, `preprod` o `production`; los valores no se enumeran ni se guardan en el repositorio. No se encontró configuración GCP verificable. Cloud Run, Secret Manager y latencia de runtime siguen pendientes.
-- Revisión directa de GitHub REST API el **2026-09-24**: `dev` exige PR, 2 aprobaciones y check `test`; `preprod` exige PR, checks `Enforce promotion chain` y `test`, pero **0 aprobaciones**; `prod` exige PR, 1 aprobación y `Enforce promotion chain`, aunque no es el destino acordado. No existe la rama Git `main`, por lo que aún no hay protección de rama que verificar allí. El Environment `production` sí requiere aprobación de `luci-efe` y su política permite solo `main`; el Environment `preprod` permite `preprod`. `dev`, `preprod`, `staging` y `production` reportaron cero secretos configurados. Esto deja el gate de preprod (aprobación) y el cutover/protección de `main` como configuración pendiente; no se cambió ninguna regla.
-- El candidato local actualizado de PR30 (`cc40c79`, encima de `b67bb97`) solo habilita la migración Neon no productiva tras un `Django tests` exitoso para un `push` protegido a `dev`/`preprod` y una PR mergeada del mismo repositorio cuyo `merge_commit_sha` coincide exactamente con el SHA probado y cuyo destino coincide con la rama. Un cierre sin merge, fork, push directo sin PR asociada, test fallido o modo Cloud no pasa el gate. Un error/JSON inválido de GitHub API deja la elegibilidad desconocida y falla el job visible en vez de saltar la migración con éxito. Neon y Cloud Run comparten concurrencia por ambiente con `queue: max`; la elegibilidad se vuelve a revisar tras el lock, y una ejecución obsoleta se omite antes de solicitar secretos. El workflow Cloud Run permanece opt-in y es la ruta única de migración cuando se habilite. También se eliminó una interpolación de input dentro del shell del reusable workflow. Suite de contrato de release **28/28**; `scripts/rehearse-migration-conflict.py` pasó en PostgreSQL 18.0.6 desechable: conflicto reproducido, checks previos fallidos como se espera, migration merge compatible aplicada y esquema/dato final validados; contenedor eliminado automáticamente. YAML, Ruff, formato y `git diff --check` pasan; revisión nativa independiente sin hallazgos del fix fail-closed. **No hubo ejecución de GitHub Actions y el candidato sigue local/no integrado**; no hay workflow publicado ni secreto Neon/GCP configurado. La publicación espera revisión Opus 5.5 solicitada por Fernando; Claude Code estaba sin sesión autenticada al 2026-09-24.
-- El trabajo local de PR33 ahora falla de forma cerrada ante alias de conexión TLS, colisiones de identidad en los seeds demo y colisiones de códigos/IDs del catálogo; revisión nativa independiente sin bloqueadores en esas guardas. PostgreSQL 18: suite enfocada de seeds **17/17** y suite completa Backend **229/229** (dos advertencias existentes); Ruff y `git diff --check` pasan. El 2026-09-24 el recorrido desde clon Git local limpio de `b7a0f2f` verificó devcontainer/Compose, migraciones, catálogo DRAFT, demo seed, rerun idempotente y API schema HTTP 200; `migrate --check`, `manage.py check` y guard/idempotence tests 17/17 pasaron. El stack/volumen/clone temporales se eliminaron. Backend commit `b7a0f2f` permanece local, no publicado. El fixture sigue `DRAFT`; no se cargaron filas en Neon y la ratificación de Product sigue pendiente.
-- En el candidato local de PR33 `ae9f4f4` se añadió además `seed_neon_dev`: sólo permite Neon dev con rol pooled app/TLS verificado y catálogo aprobado de ruta fija cuyo SHA-256 se pinnea aparte en el entorno dev; operación manual y transaccional, sin staging/prod ni trigger CI. Se protegieron las cuentas demo ya vinculadas a Microsoft/Firebase, la atribución idempotente de clanes y los incrementos concurrentes de puntos en usuario/clanes (incluida la API). PostgreSQL 18: **249/249 tests**; checks Django, `makemigrations --check`, Ruff, formato y diff pasan. Dos revisiones nativas independientes del diff final: sin hallazgos. Commit local, no publicado. No existe fixture ni pin aprobado: Producto aún debe ratificar T11; no se ejecutó ningún write a Neon. Publicación sigue esperando revisión Claude Code Opus 5.5; sesión sin autenticar al 2026-09-24.
-- El verificador local de recuperación PR34 fue reforzado en Backend commit `bcc4f12`: hashes integrales de las 12 tablas core (incluye clanes soft-deleted y todos los campos de ActionLog), atribuciones guardadas con fingerprints de clan en lugar de UUIDs directos, transacción de lectura comprobada y timeout total que limpia baselines parciales para permitir reintento. PostgreSQL 18: 17 pruebas del verificador y suite Backend **229/229**; `check`, `makemigrations --check`, Ruff y diff limpios. Esto no es una prueba PITR; no se creó rama ni se escribió en Neon.
-- El candidato de actualización PR34 (`602c6b4`) integra el PR30 actual y el verificador de recuperación sobre el último estado local de `dev`, sin conflictos. Suite Backend **222/222**, contrato de release **28/28**, verificador **10/10**, `check`, `makemigrations --check`, Ruff, formato y diff limpios; revisión nativa independiente sin hallazgos. No es un restore/PITR real; no se creó rama ni se escribió en Neon. Las ramas PR30/PR34 siguen locales y sin publicar hasta revisión Claude Opus 5.5.
-- Neon `dev` y `staging` quedaron aplicadas al esquema Django actual: 38 filas de ledger, 23 tablas públicas y cero usuarios/acciones de aplicación. App role pooled: smoke OK, sin privilegio `CREATE` en `public`; las credenciales app de dev y staging se rechazaron al probarlas contra el otro endpoint. El `schema-diff` de Neon CLI 4.16.0 entre `dev` y `staging`, revalidado el 2026-09-24, no mostró diferencias de tablas/DDL; el dump solo refleja ownership/grants específicos por ambiente.
-- Verificación de solo lectura de Neon API/CLI el 2026-09-24: el proyecto conserva las ramas `production` (default/primary), `dev` y `staging`; cada rama reporta `protected=false`. El proyecto tiene `allowed_ips.ips=[]`, `protected_branches_only=false` y plan `free_v3`; el OpenAPI de Neon indica que `branch.protected` requiere un plan pago, así que un upgrade necesita aprobación de presupuesto. El schema-diff `production` → `dev` muestra 23 tablas públicas presentes en `dev` y ausentes en `production` (incluye `django_migrations`); `dev`/`staging` tienen el mismo conjunto de 23 tablas. No se aplicaron migraciones ni se escribieron datos en `production`. La rama de producción permanece sin credenciales SQL productivas verificadas; antes de cualquier release hay que confirmar si la rama está intencionalmente sin inicializar y ensayar el plan completo de migración contra PostgreSQL 18 desechable, verificar aprobación GitHub `main` y completar restore/PITR. La protección Neon queda pendiente de aprobación de plan, aparte del gate de `main`.
+- Las reglas de rama, aprobaciones y GitHub Environments se verificaron el **2026-09-24**; los detalles se mantienen fuera del repositorio público. El corte a Git `main` requiere protección y aprobación confirmadas antes de activarse. No se encontró configuración GCP verificable; Cloud Run, Secret Manager y latencia de runtime siguen pendientes.
+- No se publican aquí detalles de secretos, protecciones por rama ni responsables. La verificación de GitHub confirmó que hay ajustes pendientes: la rama `main` aún no existe y las reglas/aprobaciones deben verificarse al preparar el corte. No se cambió ninguna regla. No se encontró configuración GCP verificable; Cloud Run, Secret Manager y latencia de runtime siguen pendientes.
+- El candidato local de migración CI/CD exige una PR mergeada al destino protegido, valida el SHA probado y serializa releases por ambiente; el cierre sin merge no migra. Errores al verificar la elegibilidad fallan de forma visible. La promoción usa el digest inmutable de la imagen y no una etiqueta basada en el SHA del merge. Suite de contrato de release **31/31**; ensayo de conflicto en PostgreSQL 18 desechable validó conflicto detectado, controles previos y migración compatible. Los workflows aún no están publicados ni ejecutados en GitHub; no se han configurado secretos Neon/GCP. La candidata local requiere revisión independiente antes de publicarse.
+- El candidato local de catálogo/demo incluye un comando de seed manual, transaccional y limitado a Neon `dev`, con rol app, TLS y hash del catálogo aprobado. Los datos demo no se cargan en preproducción ni producción. Las guardas de TLS, identidad, conteos de puntos y colisiones de catálogo tienen pruebas. PostgreSQL 18: **250 tests pasaron**. El candidato no está publicado; falta que Producto ratifique los valores y el fixture de catálogo. No se escribió en Neon.
+- El candidato PR34 combina la migración endurecida con el verificador de recuperación que omite identificadores directos en el baseline y comprueba integridad de forma acotada. Las pruebas del verificador corren contra PostgreSQL local desechable; esto no constituye un ejercicio PITR. No se creó una rama Neon ni se escribió en Neon.
+- Las consultas de solo lectura confirmaron paridad de esquema entre `dev` y `staging`, y diferencias entre `dev` y `production`. Antes de habilitar releases productivos se requiere revisar el estado de producción con el operador autorizado, validar credenciales segregadas sin exponerlas, resolver cualquier deriva, y completar restauración/PITR y aprobación de `main`. No se aplicaron migraciones ni se escribieron datos en producción. Protección de ramas Neon depende del plan y requiere una decisión presupuestaria.
 - Las URLs estándar actuales de Neon con `sslmode=require` se usaron junto con `channel_binding=require`; ambos valores deben conservarse. `verify-full` sigue aceptado si se configura una CA confiable.
 
 **Pendiente humano/externo:** nombrar suplente Neon; cargar secretos reales por environment cuando estén aprobados; crear/proteger `main` en un corte separado; configurar GCP e IAM; acordar valores de catálogo antes de sembrarlos en Neon; completar restore/PITR y aceptación de producción. No hacer seed DRAFT en ambientes compartidos.
@@ -75,7 +59,7 @@ Versión fijada en [`.neon-cli-version`](../.neon-cli-version). Probada en macOS
 npm install -g neon@4.16.0
 neon --version
 neon login
-neon link --project-id cool-mouse-83825858 --branch production --context-file .neon --no-env-pull -y
+neon link --project-id "$NEON_PROJECT_ID" --branch production --context-file .neon --no-env-pull -y
 ```
 
 Ejecutar desde `neon-db/` (no la raíz de Infra: el Terraform de GCP vive en la raíz desde 2026-09-11). `--context-file .neon` evita reutilizar contexto en un directorio padre. **`--no-env-pull` es deliberado:** la versión actual descarga variables como `DATABASE_URL` por defecto; el inventario no necesita contraseñas. No usar `--no-checks`: esta vinculación fue validada contra la API.
@@ -84,44 +68,38 @@ Ejecutar desde `neon-db/` (no la raíz de Infra: el Terraform de GCP vive en la 
 
 El resultado comprobado de `link` fue:
 
-```text
-Linked .neon:
-  orgId:     org-twilight-lab-95420626
-  projectId: cool-mouse-83825858
-  branch:    production
-INFO: Skipped env pull (--no-env-pull).
-```
+La salida confirma únicamente el vínculo al proyecto y rama seleccionados; omitir `--no-env-pull` podría descargar secretos al entorno local.
 
 Fuentes del proveedor: [paquete oficial](https://www.npmjs.com/package/neon/v/4.16.0), [login](https://neon.com/docs/cli/login), [link](https://neon.com/docs/cli/link).
 
 ## Credenciales y alcance
 
-- El login del CLI solicita permisos amplios de administración de proyectos y organizaciones. Fernando autorizó expresamente el consentimiento para este trabajo. No es la credencial SQL de la aplicación.
+- El login del CLI solicita permisos amplios de administración de proyectos y organizaciones. No equivale a la credencial SQL de la aplicación.
 - El CLI almacena credenciales en `~/.config/neon/credentials.json`, fuera del repositorio; permisos verificados **0600** (`-rw-------`). No copiar ese archivo al repo, tickets o logs.
 - `.neon` contiene IDs/contexto, no tokens. Se mantiene ignorado para evitar que el contexto local predeterminado de production se propague a otros checkouts.
 - `.gitignore` excluye `.neon`, sus variantes, `.env`, `.env.*`, archivos de credenciales y `node_modules`; permite `.env.example` sin secretos.
-- Las conexiones SQL actuales se obtuvieron directamente desde Neon CLI y se usaron solo en procesos efímeros; no se descargaron a archivos ni se registraron en logs/issues. Los roles `greeniteso_{dev,staging,production}_{app,migrator}` están enumerados en Neon. App/migrator se validaron en dev/staging, y la credencial app de cada uno fue rechazada al probarla contra el otro ambiente; producción no tiene credenciales verificadas. No se configuraron GitHub secrets.
-- **Los desarrolladores y CI local no necesitan Neon CLI ni login.** T7 usará PostgreSQL 18 local. `neon init`, `neon skills`, `neon mcp` y Neon Auth no son prerrequisitos; T2 fue retirado y la autenticación elegida es Firebase.
+- Las conexiones SQL de verificación se obtuvieron desde Neon CLI y se usaron solo en procesos efímeros; no se descargaron a archivos ni se registraron en logs/issues. Las identidades app/migrator se comprobaron en desarrollo y preproducción, incluidas denegaciones cruzadas; producción aún requiere verificación autorizada. No se configuraron credenciales GitHub en este trabajo.
+- **Los desarrolladores y CI local no necesitan Neon CLI ni login.** T7 usa PostgreSQL 18 local. `neon init`, `neon skills`, `neon mcp` y Neon Auth no son prerrequisitos; la autenticación de la aplicación usa Microsoft Entra ID.
 
 ## Verificación reproducible, solo lectura
 
 ```bash
 neon --version
-neon projects get cool-mouse-83825858 --output json
-neon branches list --project-id cool-mouse-83825858 --output json
-neon databases list --project-id cool-mouse-83825858 --branch production --output json
-neon api /projects/cool-mouse-83825858/endpoints --method GET --output json
+neon projects get "$NEON_PROJECT_ID" --output json
+neon branches list --project-id "$NEON_PROJECT_ID" --output json
+neon databases list --project-id "$NEON_PROJECT_ID" --branch production --output json
+neon api "/projects/$NEON_PROJECT_ID/endpoints" --method GET --output json
 git check-ignore .neon .env .env.production credentials.json .config/neon/credentials.json
 git status --short --ignored
 ```
 
-Se verificaron los comandos anteriores y `link`; todos los comandos de inventario finalizaron con código 0. También pasaron `git diff --check`, la revisión de enlaces locales, las excepciones de `.gitignore` y un escaneo de patrones de credenciales en los archivos a publicar; no se incluyeron archivos de autenticación. La autenticación inicial caducó esperando consentimiento; un segundo login guardó las credenciales y permitió las consultas. El CLI reabrió un consentimiento adicional después de «Auth complete»; se canceló ese proceso redundante. `neon endpoints list` no existe en 4.16.0: para endpoints se verificó la llamada GET indicada arriba.
+Se verificaron los comandos anteriores y `link`; los comandos de inventario finalizaron con código 0. También pasaron `git diff --check`, la revisión de enlaces locales, las excepciones de `.gitignore` y un escaneo de patrones de credenciales en los archivos revisados; no se incluyeron archivos de autenticación. `neon endpoints list` no existe en 4.16.0: para endpoints se verificó la llamada GET indicada arriba.
 
 ## Estado de aceptación
 
 - [x] CLI fijado, instalado y vinculación online verificada.
 - [x] Inventario técnico de proyecto, ramas, DB, versión, región, uso y mapeo GitHub verificados.
-- [x] Dueño de la cuenta confirmado.
+- [x] Cuenta de proyecto gestionada por la organización.
 - [ ] Suplente nombrado y registrado.
 - [x] Exclusiones de secretos preparadas y comprobadas; autenticación fuera del repo.
 - [x] Desarrollo local sin Neon documentado.

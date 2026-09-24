@@ -5,7 +5,7 @@
 # reaches Cloud Run.
 
 resource "google_cloudbuild_trigger" "build" {
-  count       = var.github_repository != null ? 1 : 0
+  count       = var.github_trigger_enabled && var.github_repository != null ? 1 : 0
   project     = var.project_id
   name        = "${var.app_name}-${var.environment}-build"
   description = "Build ${var.app_name} on push to ${var.trigger_branch} (${var.environment})"

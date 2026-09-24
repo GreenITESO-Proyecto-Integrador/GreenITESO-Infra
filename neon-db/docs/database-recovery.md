@@ -10,7 +10,7 @@ haya ejecutado.
 - Operador primario: Fernando Ramos (`luci-efe`); suplente pendiente.
 - Revisor: Backend verifica conteos, claves foráneas y atribución histórica.
 - Aprobador: responsable del ambiente decide si se puede cambiar tráfico.
-- La restauración de PostgreSQL no recupera cuentas de Firebase ni objetos de
+- La restauración de PostgreSQL no recupera identidades de Microsoft Entra ni objetos de
   GCS; esos proveedores tienen sus propios procedimientos.
 
 El inventario revalidado el 2026-09-24 registra el plan Free y una retención
@@ -63,7 +63,7 @@ Se selecciona un instante anterior al incidente, se restaura primero a una
 `recovery-*` desechable y Backend ejecuta las mismas validaciones del ensayo.
 Después, el aprobador elige entre corregir hacia adelante en la rama afectada
 o cambiar tráfico a la restauración; al cambiar de rama también deben rotarse
-las referencias de conexión y comprobar Firebase/GCS por separado.
+las referencias de conexión y comprobar Microsoft Entra/GCS por separado.
 
 La expectativa de RPO/RTO se registra con el resultado real, no con una
 suposición del plan. La automatización de respaldos lógicos y su retención no
