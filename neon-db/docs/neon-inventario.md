@@ -19,6 +19,7 @@ Verificado: **2026-09-24**, mediante Neon CLI **4.16.0**, conexiones PostgreSQL 
 | Retención configurada | `21600` segundos = 6 horas |
 | Backups y restauración | La aceptación requiere verificar retención y completar un ejercicio de restauración; detalles operativos no se reproducen aquí |
 | Ramas incluidas / límite de cuenta | 3 / 10; no crear ramas por PR |
+
 Fuente: consola y API oficial de Neon, consultadas el 2026-09-24. Este documento omite identificadores de cuenta, proyecto, rama y endpoint. Otros runbooks y evidencia históricos del repositorio/wiki pueden conservarlos; este cambio no los elimina del historial ni es una redacción global.
 
 ## Mapeo de ambientes y estado vigente de CI/CD
