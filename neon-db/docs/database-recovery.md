@@ -13,10 +13,12 @@ haya ejecutado.
 - La restauración de PostgreSQL no recupera cuentas de Firebase ni objetos de
   GCS; esos proveedores tienen sus propios procedimientos.
 
-El inventario verificado el 2026-09-10 registra Free y 21,600 segundos
-(6 horas), sujetos al límite de cambios del plan; consulta [cuotas](neon-cuotas.md).
-Vuelve a verificar la ventana visible el día de la prueba. Esta ventana corta
-no garantiza recuperación de un incidente descubierto al día siguiente.
+El inventario revalidado el 2026-09-24 registra el plan Free y una retención
+configurada de 21,600 segundos (6 horas), sujeta al límite de cambios del
+plan; consulta [cuotas](neon-cuotas.md). Vuelve a verificar la ventana visible
+el día de la prueba.
+Esta ventana corta no garantiza recuperación de un incidente descubierto al día
+siguiente.
 Una rama creada desde el estado actual no demuestra recuperación a un instante
 anterior; el ejercicio debe seleccionar un punto de tiempo dentro de la
 ventana visible.
