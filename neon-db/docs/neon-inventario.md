@@ -20,6 +20,7 @@ Verificado: **2026-09-24**, mediante Neon CLI **4.16.0**, conexiones PostgreSQL 
 | Compute de production | `ep-old-salad-axvsz82z`, read-write, observado `idle`, rango 0.25–2 CU |
 | Suspensión | API: `suspend_timeout_seconds=0`, que significa usar el valor global; Free usa 5 minutos de inactividad |
 | Retención configurada | `21600` segundos = 6 horas |
+| Snapshots de backup | Ninguno manual; sin schedule en `production`, `staging` o `dev`, verificado el 2026-09-24 |
 | Tamaño lógico reportado por API | 33,660,928 bytes (aprox. 32.1 MiB, campo `synthetic_storage_size`); no equivale a filas de aplicación ni a una medición de carga del piloto |
 | Ramas incluidas / límite de cuenta | 3 / 10; no crear ramas por PR |
 | Periodo de consumo reportado por API | 2026-09-08 13:36:31 UTC → 2026-10-01 00:00:00 UTC |
