@@ -1,6 +1,6 @@
 # T1 — Inventario Neon y tooling de Infra
 
-Verificado: **2026-09-11**, mediante la consola autenticada y Neon CLI **4.16.0**. Ticket: [Infra #1](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/1).
+Verificado: **2026-09-24**, mediante Neon CLI **4.16.0**, conexiones PostgreSQL de solo lectura y GitHub API. Ticket: [Infra #1](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/1).
 
 ## Inventario observado
 
@@ -13,43 +13,53 @@ Verificado: **2026-09-11**, mediante la consola autenticada y Neon CLI **4.16.0*
 | Dueño de la cuenta / responsable inicial | Fernando Ramos (`luci-efe`), confirmado por él el 2026-09-10 |
 | Responsable suplente | **Pendiente de nombramiento**; no se ha otorgado acceso a otra persona |
 | Base de datos | `neondb` |
-| Propietario SQL actual | `neondb_owner`; no confundirlo con los roles app/migrator pendientes de T13 |
+| Propietario SQL actual | `neondb_owner`; los roles app/migrator por ambiente existen en Neon |
 | PostgreSQL | **18** |
 | Región | `aws-us-east-2` — AWS US East 2 (Ohio) |
 | Ramas | `production` (predeterminada, `br-falling-forest-axgavkxc`), `staging` (`br-long-band-axwyo7yx`), `dev` (`br-wild-leaf-axhsrol6`) |
 | Compute de production | `ep-old-salad-axvsz82z`, read-write, observado `idle`, rango 0.25–2 CU |
 | Suspensión | API: `suspend_timeout_seconds=0`, que significa usar el valor global; Free usa 5 minutos de inactividad |
 | Retención configurada | `21600` segundos = 6 horas |
-| Tamaño lógico observado | 32,104,448 bytes (aprox. 30.6 MiB); no es una medición de datos del piloto |
+| Tamaño lógico reportado por API | 33,660,928 bytes (aprox. 32.1 MiB, campo `synthetic_storage_size`); no equivale a filas de aplicación ni a una medición de carga del piloto |
+| Ramas incluidas / límite de cuenta | 3 / 10; no crear ramas por PR |
 | Periodo de consumo reportado por API | 2026-09-08 13:36:31 UTC → 2026-10-01 00:00:00 UTC |
+
+La API reportó `active_time_seconds=18,700`, `compute_time_seconds=4,890`,
+`data_transfer_bytes=1,747,483` y `written_data_bytes=0` al 2026-09-24
+06:38 UTC. Son contadores del periodo, no latencias ni evidencia de carga de
+la aplicación. Las conexiones de inspección y smoke incrementan actividad.
 
 Fuentes: [consola del proyecto](https://console.neon.tech/app/projects/cool-mouse-83825858), [ramas](https://console.neon.tech/app/projects/cool-mouse-83825858/branches), consultas verificadas abajo. La consola redondea el uso a 0 y advierte retrasos en métricas; eso no implica almacenamiento vacío.
 
-## Tres ambientes acordados; CI/CD aún no coincide
+## Mapeo de ambientes y estado vigente de CI/CD
 
 Fernando ratificó el **2026-09-10** mantener tres ambientes. El mapeo objetivo de T3 sigue siendo:
 
-| Ambiente objetivo | Cloud Run previsto en T3 | Rama Neon | Estado Neon al 2026-09-11 |
+| Ambiente | Git / GitHub Environment | Rama Neon | Estado verificado |
 | --- | --- | --- | --- |
-| Desarrollo desplegado | `greeniteso-dev` | `dev` | Creada desde `production`; ID `br-wild-leaf-axhsrol6`; endpoint `ep-lively-brook-ax4n0pys` |
-| Staging | `greeniteso-staging` | `staging` | Creada desde `production`; ID `br-long-band-axwyo7yx`; endpoint `ep-withered-cake-axk8vlfi` |
-| Producción | `greeniteso-prod` | `production` | Existe; ID `br-falling-forest-axgavkxc`; endpoint `ep-old-salad-axvsz82z` |
+| Desarrollo | `dev` / `dev` | `dev` | Lista; ID `br-wild-leaf-axhsrol6`; endpoint `ep-lively-brook-ax4n0pys` |
+| Preproducción | `preprod` / `preprod` | `staging` | Lista; ID `br-long-band-axwyo7yx`; endpoint `ep-withered-cake-axk8vlfi` |
+| Producción | `main` / `production` | `production` | Rama primaria protegida contra cambios de esta tarea; ID `br-falling-forest-axgavkxc`; endpoint `ep-old-salad-axvsz82z` |
 
 **Desarrollo local** significa PostgreSQL en devcontainer, no la rama cloud `dev`.
 
-T3 creó `staging` y `dev` el **2026-09-11** con `--project-id cool-mouse-83825858`, `--parent production`, `--cu 0.25-1` y `--no-secrets`. El plan Free rechazó `--suspend-timeout 300`; al omitirlo, ambas ramas usan el valor global observado de 300 segundos. No se configuró expiración. La creación de una rama copia roles y bases de datos del padre: estos IDs no aíslan credenciales por sí solos. T13 debe crear roles SQL únicos por ambiente y T4 debe publicar solo referencias de secretos.
+T3 creó `staging` y `dev` el **2026-09-11** con `--project-id cool-mouse-83825858`, `--parent production`, `--cu 0.25-1` y `--no-secrets`. No se configuró expiración. El proyecto tiene únicamente esas tres ramas: los previews por PR deben usar PostgreSQL efímero de CI, no ramas Neon.
 
-Verificación del backend: rama predeterminada `dev`, commit [`37e4809baf546d22154f51dd5373e42eeefd6464`](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/tree/37e4809baf546d22154f51dd5373e42eeefd6464).
+Verificación del Backend: la rama predeterminada remota es `dev` (commit
+`7395cf7252543536091301eefde80f2297c3dab0`); también existen Git `preprod` y
+`prod`. **Git `main` no existe**, y Git `prod` se conserva intacta hasta un
+cambio de corte aprobado. Neon no recibe automáticamente una rama Git ni un
+`push` al actual `prod` por esta propuesta.
 
-- [Documentación de despliegue](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/37e4809baf546d22154f51dd5373e42eeefd6464/docs/deployment.md): cuatro etapas `dev → test → preprod → prod`.
-- [Workflows](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/tree/37e4809baf546d22154f51dd5373e42eeefd6464/.github/workflows): `deploy-dev.yml`, `deploy-test.yml`, `deploy-preprod.yml`, `deploy-prod.yml`; `promote.yml` ofrece `test`, `preprod`, `prod`.
-- Git branches remotas: `dev`, `main`, `test`, `preprod`, `prod`. `main` también contiene los cuatro workflows de despliegue.
-- GitHub Environments ahora incluye `dev`, `staging` y `production` (`copilot` es tooling). Staging permite Git `staging`; production permite Git `main` y exige revisión de Fernando (`luci-efe`). Se verificaron las políticas mediante la API. Esto no provisiona Cloud Run, IAM ni secretos; el branch Git `staging` y los workflows nuevos siguen pendientes de integrar.
-- El mapeo operativo del diagrama vigente es `dev` Git → `dev` Neon, `staging` Git → `staging` Neon y `main` Git → `production` Neon. El pipeline de cuatro etapas antiguo se conserva hasta que se fusione la alineación propuesta.
-- La región Cloud Run se toma de `secrets.GCP_REGION`; no se leyó su valor ni se verificó la región desplegada. Una ejecución verde tampoco prueba despliegue: el workflow puede omitirlo cuando falta configuración.
-- La conexión real de solo lectura con `dev_owner` confirmó `TLSv1.3` mediante `\conninfo`; el fallback nativo IPv6 demoró aproximadamente 30 segundos antes de completar por IPv4.
+- GitHub Environments observados: `dev`, `preprod`, `production`, y duplicados heredados `staging`/`copilot`. Production exige aprobación de `luci-efe` y permite Git `main`. El environment `staging` permite Git `staging` y no se usa para el mapeo acordado.
+- Las reglas `dev` y `preprod` ahora requieren el check GitHub Actions `test`; `preprod` conserva `Enforce promotion chain` y requiere ramas actualizadas. Se mantienen los requisitos de PR/revisión existentes. Git `prod` y su protección no se cambiaron.
+- GitHub no muestra secretos Neon/GCP en los environments `dev`, `preprod` o `production`; los valores no se enumeran ni se guardan en el repositorio. No se encontró configuración GCP verificable. Cloud Run, Secret Manager y latencia de runtime siguen pendientes.
+- El borrador local actualizado de PR30 define migración únicamente tras un push exitoso a `dev`/`preprod` (resultado de merge protegido), usa concurrencia por entorno y conexión directa migrator; un cierre de PR sin merge no activa migración. El job Neon independiente se omite cuando Cloud Run está habilitado, para que el job one-shot de Cloud Run sea la única ruta de migración. **La actualización local aún no está publicada ni integrada**, así que el workflow no está activo remotamente. El flujo GCP queda opt-in y no se habilita.
+- Neon `dev` y `staging` quedaron aplicadas al esquema Django actual: 38 filas de ledger, 23 tablas públicas y cero usuarios/acciones de aplicación. App role pooled: smoke OK, sin privilegio `CREATE` en `public`. La diferencia de esquema entre esas ramas se limita a propietario y grants por ambiente. Las migraciones se ensayaron en PostgreSQL 18 antes de aplicarse.
+- La rama Neon `production` no se modificó. Sus roles app/migrator aparecen en el catálogo, pero no se pudo obtener por el CLI una cadena con contraseña utilizable; el estado de credenciales no está verificado. El plan de migración de producción, la protección de Git `main`, el restore y la autorización explícita siguen siendo gates obligatorios.
+- Las URLs estándar actuales de Neon con `sslmode=require` se usaron junto con `channel_binding=require`; ambos valores deben conservarse. `verify-full` sigue aceptado si se configura una CA confiable.
 
-**Acción pendiente de coordinación Backend/Infra:** alinear workflows, promoción, documentación y GitHub Environments con los tres ambientes acordados antes de conectar T3/T4/T15. El [PR de borrador #30](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/pull/30) propone esa alineación y tiene checks verdes, pero aún no está fusionado ni desplegado. No asignar silenciosamente dos ambientes distintos a una misma rama Neon.
+**Pendiente humano/externo:** nombrar suplente Neon; cargar secretos reales por environment cuando estén aprobados; crear/proteger `main` en un corte separado; configurar GCP e IAM; acordar valores de catálogo antes de sembrarlos en Neon; completar restore/PITR y aceptación de producción. No hacer seed DRAFT en ambientes compartidos.
 
 ## Instalación reproducible (solo Infra)
 
@@ -84,7 +94,7 @@ Fuentes del proveedor: [paquete oficial](https://www.npmjs.com/package/neon/v/4.
 - El CLI almacena credenciales en `~/.config/neon/credentials.json`, fuera del repositorio; permisos verificados **0600** (`-rw-------`). No copiar ese archivo al repo, tickets o logs.
 - `.neon` contiene IDs/contexto, no tokens. Se mantiene ignorado para evitar que el contexto local predeterminado de production se propague a otros checkouts.
 - `.gitignore` excluye `.neon`, sus variantes, `.env`, `.env.*`, archivos de credenciales y `node_modules`; permite `.env.example` sin secretos.
-- No se descargaron cadenas de conexión ni se crearon API keys manuales; T3 creó únicamente las ramas indicadas arriba. T13 aún no ha aplicado roles SQL ni migraciones; la conexión de `dev_owner` se usó solo para lectura de identidad y TLS, sin mutaciones SQL.
+- Las conexiones SQL actuales se obtuvieron directamente desde Neon CLI y se usaron solo en procesos efímeros; no se descargaron a archivos ni se registraron en logs/issues. Los roles `greeniteso_{dev,staging,production}_{app,migrator}` están enumerados en Neon. App/migrator se validaron en dev/staging; producción no tiene credenciales verificadas. No se configuraron GitHub secrets.
 - **Los desarrolladores y CI local no necesitan Neon CLI ni login.** T7 usará PostgreSQL 18 local. `neon init`, `neon skills`, `neon mcp` y Neon Auth no son prerrequisitos; T2 fue retirado y la autenticación elegida es Firebase.
 
 ## Verificación reproducible, solo lectura
@@ -104,11 +114,11 @@ Se verificaron los comandos anteriores y `link`; todos los comandos de inventari
 ## Estado de aceptación
 
 - [x] CLI fijado, instalado y vinculación online verificada.
-- [x] Inventario técnico de proyecto, rama, DB, versión y región verificado.
+- [x] Inventario técnico de proyecto, ramas, DB, versión, región, uso y mapeo GitHub verificados.
 - [x] Dueño de la cuenta confirmado.
 - [ ] Suplente nombrado y registrado.
 - [x] Exclusiones de secretos preparadas y comprobadas; autenticación fuera del repo.
 - [x] Desarrollo local sin Neon documentado.
 - [x] Inventario publicado en [wiki](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/wiki/Neon-inventario). El usuario hizo público el repositorio para habilitarlo.
 
-T1 permanece abierto únicamente por el nombramiento del suplente.
+T1 permanece abierto por el nombramiento del suplente y la confirmación del proceso operativo de tres equipos.

@@ -1,25 +1,25 @@
 # T6 — Plan, cuotas y presupuesto del piloto
 
-Verificación: **2026-09-10**. Ticket: [Infra #6](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/6). Se completa aquí el inventario temprano; **las mediciones desde staging siguen pendientes**.
+Verificación: **2026-09-24**. Ticket: [Infra #6](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/6). Se actualiza el inventario de cuotas; **las mediciones desde un runtime staging siguen pendientes**.
 
 ## Plan y límites actuales
 
-Proyecto `cool-mouse-83825858`, plan **Free**, región AWS Ohio (`aws-us-east-2`), PostgreSQL **18**. La consola y las páginas oficiales coinciden en las cuotas principales:
+Proyecto `cool-mouse-83825858`, plan **Free v3**, región AWS Ohio (`aws-us-east-2`), PostgreSQL **18**. El anuncio oficial vigente del plan gratuito y la API del proyecto indican los límites siguientes:
 
 | Recurso | Límite actual | Observación |
 | --- | --- | --- |
 | Cómputo | 100 CU-h por proyecto por mes | Compartido por todos los computes de las ramas; no 100 por ambiente |
-| Ramas | 10 por proyecto | Existe 1; el objetivo de 3 deja 7 espacios, no 7 computes gratuitos adicionales |
+| Ramas | 10 por proyecto | Existen 3 (`dev`, `staging`, `production`); quedan 7 espacios, no 7 computes gratuitos adicionales. No crear ramas por PR |
 | Tamaño compute | Hasta 2 CU | Production está configurado 0.25–2 CU |
 | Almacenamiento | 0.5 GB por proyecto | Contabilizar datos, índices y cambios de ramas; no asumir 0.5 GB por ambiente |
 | Transferencia pública | 5 GB por proyecto por mes | Neon → Cloud Run cruza proveedores; revisar también cargos de GCP por separado |
 | Suspensión automática | 5 minutos de inactividad | Fija en Free; un compute suspendido no consume CU-h |
 | Recuperación histórica | Hasta 6 horas, limitada además por volumen de cambios | API del proyecto: 21,600 s. La documentación resume el límite como 1 GB de cambios; su tabla también utiliza «1 GB-month». No prometer seis horas completas bajo escritura intensa |
-| Historial de monitoreo | 1 día | Registrar observaciones fuera del dashboard para comparaciones semanales |
+| Historial de métricas/logs | 3 días | Según el anuncio oficial del plan vigente; registrar observaciones fuera del dashboard para comparaciones semanales |
 
-La API reporta 32,104,448 bytes de tamaño lógico/sintético (~30.6 MiB), mientras el dashboard redondea almacenamiento y consumo a cero. Las métricas pueden retrasarse una hora y no actualizarse en proyectos inactivos. El periodo actual reportado termina el **2026-10-01 00:00 UTC**.
+Al **2026-09-24 06:38 UTC**, la API reportó `synthetic_storage_size=33,660,928` bytes (~32.1 MiB), `data_transfer_bytes=1,747,483`, `active_time_seconds=18,700`, `compute_time_seconds=4,890` y `written_data_bytes=0`. Son contadores API del periodo, no mediciones de latencia ni una proyección; las conexiones de verificación también generan actividad. El periodo reportado termina el **2026-10-01 00:00 UTC**. El límite lógico por proyecto reportado por API es 512 MiB. El dashboard puede redondear el uso y retrasar las métricas.
 
-Fuentes consultadas: [consola autenticada](https://console.neon.tech/app/projects/cool-mouse-83825858), [precios vigentes](https://neon.com/pricing), [planes y comportamiento al agotar cuotas](https://neon.com/docs/introduction/plans), [scale to zero](https://neon.com/docs/introduction/scale-to-zero). No usar cifras de artículos antiguos para configurar el presupuesto.
+Fuentes consultadas: [consola autenticada](https://console.neon.tech/app/projects/cool-mouse-83825858), [anuncio oficial de Neon Backend GA y límites del plan gratuito](https://neon.com/blog/neon-backend-is-ga), [precios vigentes](https://neon.com/pricing), [planes y comportamiento al agotar cuotas](https://neon.com/docs/introduction/plans), [scale to zero](https://neon.com/docs/introduction/scale-to-zero). No usar cifras de artículos antiguos para configurar el presupuesto.
 
 ## Estimación de cómputo: tres ambientes
 
