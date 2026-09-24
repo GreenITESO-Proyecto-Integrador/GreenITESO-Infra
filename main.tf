@@ -62,11 +62,11 @@ module "network" {
 module "cicd" {
   source = "./modules/cicd"
 
-  project_id            = var.project_id
-  region                = var.region
-  app_name              = var.app_name
-  environment           = var.environment
-  github_repository     = var.github_repository
+  project_id             = var.project_id
+  region                 = var.region
+  app_name               = var.app_name
+  environment            = var.environment
+  github_repository      = var.github_repository
   github_trigger_enabled = var.github_trigger_enabled
   # var.environment (dev/staging/production) names the Neon branch and this
   # GCP environment; the legacy Git branch prod is intentionally not a target.

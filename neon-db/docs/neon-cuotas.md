@@ -4,7 +4,7 @@ Verificación: **2026-09-24**. Ticket: [Infra #6](https://github.com/GreenITESO-
 
 ## Plan y límites actuales
 
-Proyecto `cool-mouse-83825858`, plan **Free v3**, región AWS Ohio (`aws-us-east-2`), PostgreSQL **18**. El anuncio oficial vigente del plan gratuito y la API del proyecto indican los límites siguientes:
+Proyecto GreenITESO, plan **Free v3**, región AWS Ohio (`aws-us-east-2`), PostgreSQL **18**. El anuncio oficial vigente del plan gratuito y la API del proyecto indican los límites siguientes:
 
 | Recurso | Límite actual | Observación |
 | --- | --- | --- |
@@ -15,7 +15,7 @@ Proyecto `cool-mouse-83825858`, plan **Free v3**, región AWS Ohio (`aws-us-east
 | Transferencia pública | 5 GB por proyecto por mes | Neon → Cloud Run cruza proveedores; revisar también cargos de GCP por separado |
 | Suspensión automática | 5 minutos de inactividad | Fija en Free; un compute suspendido no consume CU-h |
 | Recuperación histórica | Hasta 6 horas, limitada además por volumen de cambios | API del proyecto: 21,600 s. La documentación resume el límite como 1 GB de cambios; su tabla también utiliza «1 GB-month». No prometer seis horas completas bajo escritura intensa |
-| Snapshots | 0 snapshots; ningún schedule en las tres ramas | Verificado con Neon CLI el 2026-09-24. Los snapshots son puntos de recuperación distintos de PITR y pueden conservar estados fuera de la ventana PITR; no asumir que existe un backup fuera de esas seis horas |
+| Snapshots | Verificar existencia y política con el operador antes de una decisión de recuperación | Los snapshots son distintos de PITR; no asumir que existe un punto de recuperación fuera de la ventana contratada |
 | Historial de métricas/logs | 3 días | Según el anuncio oficial del plan vigente; registrar observaciones fuera del dashboard para comparaciones semanales |
 
 Al **2026-09-24 10:09 UTC**, la API reportó `synthetic_storage_size=33,783,808` bytes (~32.2 MiB), `data_transfer_bytes=1,859,723`, `active_time_seconds=22,996`, `compute_time_seconds=6,092` y `written_data_bytes=0`. Son contadores API del periodo, no mediciones de latencia ni una proyección; las verificaciones aumentan actividad y transferencia. El periodo reportado termina el **2026-10-01 00:00 UTC**. La organización permite 10 ramas y el proyecto usa 3 (`dev`, `staging`, `production`); el límite lógico del proyecto es 512 MiB. El proyecto confirma `subscription_type=free_v3`; Neon documenta la protección de ramas como función de plan pago, por lo que habilitarla requiere aprobación de presupuesto. El dashboard puede redondear el uso y retrasar las métricas.
@@ -35,7 +35,7 @@ neon api /projects/{project_id}/endpoints/{endpoint_id} -X PATCH --describe --re
 
 y la lista actual de endpoints; no se cambió la configuración.
 
-Fuentes consultadas: [consola autenticada](https://console.neon.tech/app/projects/cool-mouse-83825858), [anuncio oficial de Neon Backend GA y límites del plan gratuito](https://neon.com/blog/neon-backend-is-ga), [precios vigentes](https://neon.com/pricing), [planes y comportamiento al agotar cuotas](https://neon.com/docs/introduction/plans), [scale to zero](https://neon.com/docs/introduction/scale-to-zero), y [Neon snapshots: recovery points](https://neon.com/blog/three-ways-to-use-your-snapshots). No usar cifras de artículos antiguos para configurar el presupuesto.
+Fuentes consultadas: consola autenticada, [anuncio oficial de Neon Backend GA y límites del plan gratuito](https://neon.com/blog/neon-backend-is-ga), [precios vigentes](https://neon.com/pricing), [planes y comportamiento al agotar cuotas](https://neon.com/docs/introduction/plans), [scale to zero](https://neon.com/docs/introduction/scale-to-zero), y [Neon snapshots: recovery points](https://neon.com/blog/three-ways-to-use-your-snapshots). No usar cifras de artículos antiguos para configurar el presupuesto.
 
 ## Estimación de cómputo: tres ambientes
 
@@ -105,7 +105,7 @@ Prerequisitos: T3/T4/T5, esquema T9a, datos representativos y despliegue staging
 
 ## Revisión semanal (a formalizar en T16)
 
-Responsable inicial de seguimiento: **Fernando Ramos (`luci-efe`)**, actual asignado del ticket. Suplente pendiente. Rotación por sprint por acordar; no se creó una automatización.
+Seguimiento asignado en el ticket; suplente pendiente de nombramiento. Rotación por sprint por acordar; no se creó una automatización.
 
 - Registrar consumo del periodo, horas-compute, storage, transferencia y número de ramas.
 - Proyectar cierre de mes y comparar con los umbrales, anotando días efectivos de actividad para no extrapolar una semana ociosa como piloto representativo.

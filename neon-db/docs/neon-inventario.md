@@ -7,7 +7,7 @@ Verificado: **2026-09-24**, mediante Neon CLI **4.16.0**, conexiones PostgreSQL 
 | Campo | Valor verificado |
 | --- | --- |
 | Proyecto | GreenITESO |
-| Identificadores de proyecto / organización | Se conservan en el registro interno de operadores; no se publican aquí |
+| Identificadores de proyecto / organización | Omitidos en este inventario; no se garantiza su ausencia en runbooks/evidencia históricos ni en la wiki pública |
 | Cuenta propietaria / responsable | Cuenta gestionada por la organización; suplente **pendiente de nombramiento** |
 | Base de datos | `neondb` |
 | Roles SQL | Roles separados de aplicación y migración por ambiente; los nombres se conservan en el gestor seguro |
@@ -17,9 +17,9 @@ Verificado: **2026-09-24**, mediante Neon CLI **4.16.0**, conexiones PostgreSQL 
 | Compute de production | Endpoint y capacidad verificados; identificadores y estado operativo omitidos |
 | Suspensión | API: `suspend_timeout_seconds=0`, que significa usar el valor global; Free usa 5 minutos de inactividad |
 | Retención configurada | `21600` segundos = 6 horas |
-| Backups y restauración | La aceptación requiere verificar retención y completar un ejercicio de restauración; los detalles se mantienen en el registro interno |
+| Backups y restauración | La aceptación requiere verificar retención y completar un ejercicio de restauración; detalles operativos no se reproducen aquí |
 | Ramas incluidas / límite de cuenta | 3 / 10; no crear ramas por PR |
-Fuente: consola y API oficial de Neon, consultadas el 2026-09-24. Los identificadores de cuenta, proyecto, rama y endpoint quedan en el inventario privado de operadores.
+Fuente: consola y API oficial de Neon, consultadas el 2026-09-24. Este documento omite identificadores de cuenta, proyecto, rama y endpoint. Otros runbooks y evidencia históricos del repositorio/wiki pueden conservarlos; este cambio no los elimina del historial ni es una redacción global.
 
 ## Mapeo de ambientes y estado vigente de CI/CD
 
