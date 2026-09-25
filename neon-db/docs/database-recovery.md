@@ -25,8 +25,10 @@ ventana visible.
 
 ## Ensayo en una rama desechable
 
-1. Confirma por escrito el proyecto, la rama fuente y la ventana del ensayo. Nunca
-   uses `production` como destino de escritura.
+1. Confirma por escrito el proyecto, la rama fuente y la ventana del ensayo.
+   Verifica antes de cualquier operación que `dev` contiene solo datos
+   sintéticos aprobados; si no puedes confirmarlo, detén el ensayo. Nunca uses
+   `production` como origen del ensayo ni como destino de escritura.
 2. En `dev`, coordina una ventana con los tres equipos. Usa el dataset sintético
    aprobado para desarrollo y registra conteos e integridad. Si el dataset de
    Backend aún no existe, detén la prueba y registra el bloqueo. Define
@@ -39,15 +41,15 @@ ventana visible.
    antes de T. Coordina la ventana para que no haya otras escrituras entre la
    captura del baseline y T. Conserva el JSON del baseline con acceso
    restringido, fuera del repositorio.
-3. Confirma un instante UTC posterior al baseline (punto T). Después de T,
-   agrega el `ActionLog` sintético con `POST_MARKER_ID` y confirma la
-   transacción. La restauración a T debe conservar los datos previos y no
-   contener esta marca posterior. Registra únicamente IDs sintéticos, tiempos
-   UTC y conteos; nunca credenciales, fotos ni datos personales.
-4. Confirma que la rama fuente `dev` contiene solo datos sintéticos aprobados;
-   si no puedes confirmarlo, detén el ensayo. En Neon Console crea una rama
-   nueva desde T, seleccionando *Branches → New branch → Time*. Nómbrala
-   `recovery-check-YYYYMMDD`, con expiración corta. La consola muestra la
+3. Confirma un instante UTC posterior al baseline dentro de la ventana PITR
+   visible (punto T). Después de T, agrega el `ActionLog` sintético con
+   `POST_MARKER_ID` y confirma la transacción. La restauración a T debe
+   conservar los datos previos y excluir la marca posterior. Registra solo IDs
+   sintéticos, tiempos UTC y conteos; nunca credenciales, fotos ni datos
+   personales.
+4. En Neon Console crea una rama nueva desde T, seleccionando
+   *Branches → New branch → Time*. Nómbrala `recovery-check-YYYYMMDD`, con
+   expiración corta. La consola muestra la
    retención disponible antes de crearla.
 5. Si se usa CLI, conserva la selección explícita de proyecto y rama y
    confirma la sintaxis de la versión instalada antes de ejecutar. La URL
@@ -55,7 +57,7 @@ ventana visible.
    imprime ni se escribe en el runbook.
 
 6. Compara la rama restaurada con el comando suministrado por Backend
-   ([PR34, verificador y uso](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/pull/34))
+   ([PR34, guía fijada al SHA probado](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/02d7ffc1bd8b21f938b9461750941d3f73a863df/docs/database-recovery-verifier.md))
    desde un proceso operador local aislado, usando `--baseline` y los mismos
    IDs y clave HMAC del paso 2. El rol de solo lectura aún no está provisionado;
    la credencial app de la rama autorizada **puede escribir**: úsala solo para
