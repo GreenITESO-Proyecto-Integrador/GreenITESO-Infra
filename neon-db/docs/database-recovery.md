@@ -45,7 +45,7 @@ ventana visible.
    `DB_RECOVERY_MARKER_HMAC_KEY` (mínimo 32 bytes) desde el gestor de secretos
    y conserva la **misma clave** hasta comparar; no la guardes junto al
    baseline. Ejecuta `db_recovery_verify --write-baseline` con
-   [la guía Backend](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/02d7ffc1bd8b21f938b9461750941d3f73a863df/docs/database-recovery-verifier.md)
+   [la guía Backend](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/fa288bd427ed9b60d01347fee90a975901f491ae/docs/database-recovery-verifier.md)
    antes de T. Coordina la ventana para que no haya otras escrituras entre la
    captura del baseline y T. Conserva el JSON del baseline con acceso
    restringido, fuera del repositorio. No refresques staging desde un dev con
