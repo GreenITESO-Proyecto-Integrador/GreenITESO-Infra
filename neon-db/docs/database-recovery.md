@@ -37,14 +37,16 @@ ventana visible.
    baseline. Ejecuta `db_recovery_verify --write-baseline` con
    [la guía Backend](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/02d7ffc1bd8b21f938b9461750941d3f73a863df/docs/database-recovery-verifier.md)
    antes de T. Coordina la ventana para que no haya otras escrituras entre la
-   captura del baseline y T.
+   captura del baseline y T. Conserva el JSON del baseline con acceso
+   restringido, fuera del repositorio.
 3. Confirma un instante UTC posterior al baseline (punto T). Después de T,
    agrega el `ActionLog` sintético con `POST_MARKER_ID` y confirma la
    transacción. La restauración a T debe conservar los datos previos y no
    contener esta marca posterior. Registra únicamente IDs sintéticos, tiempos
    UTC y conteos; nunca credenciales, fotos ni datos personales.
-4. En Neon Console crea una rama nueva desde el punto de tiempo anterior,
-   seleccionando *Branches → New branch → Time*. Nómbrala, por ejemplo,
+4. Confirma que la rama fuente `dev` contiene solo datos sintéticos aprobados;
+   si no puedes confirmarlo, detén el ensayo. En Neon Console crea una rama
+   nueva desde T, seleccionando *Branches → New branch → Time*. Nómbrala
    `recovery-check-YYYYMMDD`, con expiración corta. La consola muestra la
    retención disponible antes de crearla.
 5. Si se usa CLI, conserva la selección explícita de proyecto y rama y
@@ -62,9 +64,10 @@ ventana visible.
    transacción `READ ONLY`. Sigue los comandos y límites de la guía Backend.
    Debe comprobar migraciones, conteos y huellas de todas las tablas Django
    gestionadas, referencias foráneas, marcadores y atribución histórica.
-7. Guarda en `docs/evidence/` (o en el ticket de operaciones, solo metadatos aptos para publicación) el
-   timestamp, branch ID, duración, resultado y el hash de la consulta/script.
-   No guardes la cadena de conexión.
+7. Guarda el timestamp, branch ID, duración, resultado y el hash de la
+   consulta/script en evidencia operativa de acceso restringido. Publica en
+   `docs/evidence/` o en el ticket solo metadatos revisados como aptos para
+   publicación. No guardes la cadena de conexión.
 8. Elimina la rama desechable cuando el operador y el revisor hayan aceptado
    la evidencia. Si la prueba falla, conserva la rama solo con aprobación y
    fecha de expiración, y abre una corrección.
