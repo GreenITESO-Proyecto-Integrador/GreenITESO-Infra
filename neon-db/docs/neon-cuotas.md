@@ -1,25 +1,43 @@
 # T6 — Plan, cuotas y presupuesto del piloto
 
-Verificación: **2026-09-10**. Ticket: [Infra #6](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/6). Se completa aquí el inventario temprano; **las mediciones desde staging siguen pendientes**.
+Verificación: **2026-09-24**. Ticket: [Infra #6](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/6). Se actualiza el inventario de cuotas; **las mediciones desde un runtime staging siguen pendientes**.
 
 ## Plan y límites actuales
 
-Proyecto `cool-mouse-83825858`, plan **Free**, región AWS Ohio (`aws-us-east-2`), PostgreSQL **18**. La consola y las páginas oficiales coinciden en las cuotas principales:
+Proyecto GreenITESO, plan **Free v3**, región AWS Ohio (`aws-us-east-2`), PostgreSQL **18**. El anuncio oficial vigente del plan gratuito y la API del proyecto indican los límites siguientes:
 
 | Recurso | Límite actual | Observación |
 | --- | --- | --- |
 | Cómputo | 100 CU-h por proyecto por mes | Compartido por todos los computes de las ramas; no 100 por ambiente |
-| Ramas | 10 por proyecto | Existe 1; el objetivo de 3 deja 7 espacios, no 7 computes gratuitos adicionales |
+| Ramas | 10 por proyecto | Existen 3 (`dev`, `staging`, `production`); quedan 7 espacios, no 7 computes gratuitos adicionales. No crear ramas por PR |
 | Tamaño compute | Hasta 2 CU | Production está configurado 0.25–2 CU |
 | Almacenamiento | 0.5 GB por proyecto | Contabilizar datos, índices y cambios de ramas; no asumir 0.5 GB por ambiente |
 | Transferencia pública | 5 GB por proyecto por mes | Neon → Cloud Run cruza proveedores; revisar también cargos de GCP por separado |
 | Suspensión automática | 5 minutos de inactividad | Fija en Free; un compute suspendido no consume CU-h |
 | Recuperación histórica | Hasta 6 horas, limitada además por volumen de cambios | API del proyecto: 21,600 s. La documentación resume el límite como 1 GB de cambios; su tabla también utiliza «1 GB-month». No prometer seis horas completas bajo escritura intensa |
-| Historial de monitoreo | 1 día | Registrar observaciones fuera del dashboard para comparaciones semanales |
+| Snapshots | Verificar existencia y política con el operador antes de una decisión de recuperación | Los snapshots son distintos de PITR; no asumir que existe un punto de recuperación fuera de la ventana contratada |
+| Historial UI de métricas | 1 día en Free | Según la [documentación vigente de planes Neon](https://neon.com/docs/introduction/plans); registrar observaciones fuera del dashboard para comparaciones semanales |
 
-La API reporta 32,104,448 bytes de tamaño lógico/sintético (~30.6 MiB), mientras el dashboard redondea almacenamiento y consumo a cero. Las métricas pueden retrasarse una hora y no actualizarse en proyectos inactivos. El periodo actual reportado termina el **2026-10-01 00:00 UTC**.
+Al **2026-09-24 17:38 UTC**, la API reportó `synthetic_storage_size=33,783,808` bytes (~32.2 MiB), `data_transfer_bytes=1,859,723`, `active_time_seconds=23,360`, `compute_time_seconds=6,274` y `written_data_bytes=0`. Son contadores API del periodo, no mediciones de latencia ni una proyección; las verificaciones aumentan actividad y transferencia. El periodo reportado termina el **2026-10-01 00:00 UTC**. El proyecto permite 10 ramas y usa 3 (`dev`, `staging`, `production`); el límite lógico del proyecto es 512 MiB. El proyecto confirma `subscription_type=free_v3`; Neon documenta la protección de ramas como función de plan pago, por lo que habilitarla requiere aprobación de presupuesto. El dashboard puede redondear el uso y retrasar las métricas.
 
-Fuentes consultadas: [consola autenticada](https://console.neon.tech/app/projects/cool-mouse-83825858), [precios vigentes](https://neon.com/pricing), [planes y comportamiento al agotar cuotas](https://neon.com/docs/introduction/plans), [scale to zero](https://neon.com/docs/introduction/scale-to-zero). No usar cifras de artículos antiguos para configurar el presupuesto.
+**Discrepancia de uso por aclarar:** `written_data_bytes=0` no concuerda con la evidencia de cambios SQL en `dev`/`staging` del 2026-09-11. El campo no es una auditoría histórica y no se usará para afirmar que no hubo escrituras; confirmar con Neon cómo interpretar este valor antes de usarlo en controles o proyecciones.
+
+La API devuelve `suspend_timeout_seconds=0` en los ajustes por defecto del
+proyecto y en los tres endpoints. El esquema actualizado de
+`PATCH /projects/{project_id}/endpoints/{endpoint_id}` confirma que `0` usa el
+valor predeterminado del plan y `-1` deshabilita scale-to-zero; el plan Free
+no permite personalizar este timeout. Los pares más recientes `last_active`/`suspended_at`
+muestran suspensión entre 302 y 321 segundos después de la última actividad,
+consistente con el valor predeterminado de 300 segundos. Evidencia consultada
+con:
+
+```sh
+neon api /projects/{project_id}/endpoints/{endpoint_id} -X PATCH --describe --refresh
+```
+
+y la lista actual de endpoints; no se cambió la configuración.
+
+Fuentes consultadas: consola autenticada, [anuncio oficial de Neon Backend GA y límites del plan gratuito](https://neon.com/blog/neon-backend-is-ga), [precios vigentes](https://neon.com/pricing), [planes y comportamiento al agotar cuotas](https://neon.com/docs/introduction/plans), [scale to zero](https://neon.com/docs/introduction/scale-to-zero), y [Neon snapshots: recovery points](https://neon.com/blog/three-ways-to-use-your-snapshots). No usar cifras de artículos antiguos para configurar el presupuesto.
 
 ## Estimación de cómputo: tres ambientes
 
@@ -89,7 +107,7 @@ Prerequisitos: T3/T4/T5, esquema T9a, datos representativos y despliegue staging
 
 ## Revisión semanal (a formalizar en T16)
 
-Responsable inicial de seguimiento: **Fernando Ramos (`luci-efe`)**, actual asignado del ticket. Suplente pendiente. Rotación por sprint por acordar; no se creó una automatización.
+Seguimiento asignado en el ticket; suplente pendiente de nombramiento. Rotación por sprint por acordar; no se creó una automatización.
 
 - Registrar consumo del periodo, horas-compute, storage, transferencia y número de ramas.
 - Proyectar cierre de mes y comparar con los umbrales, anotando días efectivos de actividad para no extrapolar una semana ociosa como piloto representativo.

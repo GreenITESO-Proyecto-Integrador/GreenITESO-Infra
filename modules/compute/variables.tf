@@ -44,7 +44,7 @@ variable "db_app_pooled_secret_id" {
 }
 
 variable "extra_env_secrets" {
-  description = "Additional env var name -> Secret Manager secret ID pairs (e.g. Firebase config, email service credentials)."
+  description = "Additional env var name -> Secret Manager secret ID pairs (e.g. Microsoft Entra ID config, email service credentials)."
   type        = map(string)
   default     = {}
 }

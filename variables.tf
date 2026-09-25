@@ -1,5 +1,5 @@
 variable "project_id" {
-  description = "GCP project ID. No project exists yet; this has no default on purpose."
+  description = "GCP project ID. No project ID has been configured or verified; this has no default on purpose."
   type        = string
 }
 
@@ -69,6 +69,19 @@ variable "github_repository" {
   description = "owner/repo for the Cloud Build trigger source (e.g. GreenITESO-Proyecto-Integrador/GreenITESO-Backend)."
   type        = string
   default     = null
+}
+
+variable "github_trigger_enabled" {
+  description = "Keep false until Cloud Build uses the canonical migration-gated release path."
+  type        = bool
+  default     = false
+  validation {
+    condition = !var.github_trigger_enabled || try(
+      can(regex("^[^/[:space:]]+/[^/[:space:]]+$", var.github_repository)),
+      false,
+    )
+    error_message = "github_repository must be a non-empty owner/repo when github_trigger_enabled is true."
+  }
 }
 
 variable "monitoring_notification_email" {

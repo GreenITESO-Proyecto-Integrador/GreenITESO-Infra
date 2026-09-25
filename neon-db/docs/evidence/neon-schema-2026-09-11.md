@@ -1,8 +1,10 @@
 # Bootstrap del núcleo en Neon — 2026-09-11
 
 Inventario histórico previo al [renombre posterior de tablas](domain-table-names-2026-09-12.md).
-Dev/staging conservan 21 tablas y ahora registran 31 migraciones; consultar esa
-evidencia para los nombres canónicos. El listado original se conserva abajo.
+Actualización posterior al bootstrap inicial: el ejercicio de renombre del
+2026-09-12 dejó dev/staging con las mismas 21 tablas y un ledger de 31
+migraciones; consultar esa evidencia para los nombres canónicos. El listado
+original del bootstrap se conserva abajo.
 
 Operador: Fernando Ramos mediante el orquestador. Alcance ejecutado: `dev` y
 `staging`; **production no recibió contraseñas ni migraciones en este bootstrap**.
@@ -107,6 +109,14 @@ el orquestador ejecutó y verificó los resultados reales.
 - Production queda pendiente del pipeline y de preparación de recuperación.
 - El test negativo entre ambientes sigue pendiente; el login positivo y los
   grants no lo sustituyen.
-- T9b, catálogo aprobado y servicios de negocio siguen pendientes.
-- Se mantienen tres ambientes Neon: dev/staging/production. La rama Git legacy
-  preprod no constituye un cuarto GitHub Environment configurado.
+- Estado observado al 2026-09-11: T9b, catálogo aprobado y servicios de
+  negocio seguían pendientes.
+- Nota posterior (2026-09-25): este renglón describe el estado observado el
+  2026-09-11. El catálogo de referencia aprobado pertenece a todos los
+  ambientes; datos demo sintéticos son solo para Neon `dev` y desarrollo
+  local. No refrescar staging desde un dev sembrado. Esta aclaración no afirma
+  que un seed se haya ejecutado.
+- Este es un registro histórico al 2026-09-11: entonces se mantenían tres
+  ambientes Neon (dev/staging/production), y Git `preprod` todavía no era un
+  GitHub Environment configurado. La revalidación del 2026-09-24 observó el
+  Environment `preprod`; consultar el inventario vigente.
