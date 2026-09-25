@@ -50,6 +50,8 @@ Todo modelo que referencia otro dominio usa `settings.AUTH_USER_MODEL` o una
 dependencia de migración explícita. P10 fue ratificada por Fernando el
 2026-09-25: el límite diario se calcula por fecha local de
 `America/Mexico_City`, desde medianoche local hasta la siguiente medianoche.
+Fernando confirmó además el 2026-09-25 que todos los registros enviados,
+incluidos `REJECTED`, consumen el límite diario; la regla semanal se difiere.
 Esta regla de negocio no implica que un despliegue o una comprobación cloud se
 hayan ejecutado. Las decisiones P3, P8 y P9 pertenecen al esquema aprobado;
 las políticas de servicio P3/P8/P9 y P11 continúan pendientes de ratificación.
