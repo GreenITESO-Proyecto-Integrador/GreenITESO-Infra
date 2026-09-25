@@ -66,7 +66,7 @@ ventana visible.
    imprime ni se escribe en el runbook.
 
 6. Compara la rama restaurada con el comando suministrado por Backend
-   ([PR34, guía fijada al SHA probado](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/970c3f5742a34e7c4c9ad18bf0f1f8148cc47384/docs/database-recovery-verifier.md))
+   ([PR34, guía fijada al SHA publicado](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/fa288bd427ed9b60d01347fee90a975901f491ae/docs/database-recovery-verifier.md))
    desde un proceso operador local aislado, usando `--baseline` y los mismos
    IDs y clave HMAC del paso 2. El rol de solo lectura aún no está provisionado;
    la credencial app de la rama autorizada **puede escribir**: úsala solo para
