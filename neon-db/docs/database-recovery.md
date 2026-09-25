@@ -2,8 +2,9 @@
 
 Este runbook describe cómo inspeccionar y probar una recuperación de Neon sin
 tocar `production`. La prueba obligatoria se hará con datos sintéticos
-migrados y una rama desechable. Este documento no afirma que la prueba ya se
-haya ejecutado.
+migrados y una rama desechable. La secuencia siguiente es un plan; no afirma
+que la prueba, sus verificaciones ni los tiempos se hayan ejecutado u
+observado. El RPO/RTO del servicio en producción sigue por definir.
 
 ## Roles y límites
 
@@ -28,11 +29,15 @@ ventana visible.
 1. Confirma por escrito el proyecto, la rama fuente y la ventana del ensayo.
    Revisa todos los esquemas que heredará la rama, no solo las tablas públicas
    de Django. Confirma que `dev` no contiene datos de personas y que el dataset
-   sintético y la configuración heredada están aprobados para clonarse. Neon
-   Auth tiene un `project_config` cuya fila debe clasificar el operador sin
-   publicar su contenido. Si falta esa confirmación, detén el ensayo. Nunca
+   sintético y la configuración heredada están aprobados para clonarse. El
+   inventario fechado contó nueve tablas internas `neon_auth`; `project_config`
+   tenía una fila en dev y staging y su contenido no se leyó. Clasifica esta
+   configuración heredada antes de clonarla, sin publicar su contenido. Si
+   falta esa confirmación, detén el ensayo. Nunca
    uses `production` como origen del ensayo ni como destino de escritura.
-2. En `dev`, coordina una ventana con los tres equipos. Usa el dataset sintético
+2. En `dev`, coordina una ventana con los tres equipos. El catálogo de
+   referencia aprobado pertenece a todos los ambientes; los datos demo
+   sintéticos se limitan a Neon `dev` y desarrollo local. Usa el dataset
    aprobado para desarrollo y registra conteos e integridad. Si el dataset de
    Backend aún no existe, detén la prueba y registra el bloqueo. Define
    `PRE_MARKER_ID` con el UUID de un `ActionLog` sintético ya existente y
@@ -43,7 +48,8 @@ ventana visible.
    [la guía Backend](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/02d7ffc1bd8b21f938b9461750941d3f73a863df/docs/database-recovery-verifier.md)
    antes de T. Coordina la ventana para que no haya otras escrituras entre la
    captura del baseline y T. Conserva el JSON del baseline con acceso
-   restringido, fuera del repositorio.
+   restringido, fuera del repositorio. No refresques staging desde un dev con
+   datos demo sembrados.
 3. Confirma un instante UTC posterior al baseline dentro de la ventana PITR
    visible (punto T). Después de T, agrega el `ActionLog` sintético con
    `POST_MARKER_ID` y confirma la transacción. La restauración a T debe
@@ -89,8 +95,10 @@ Después, el aprobador elige entre corregir hacia adelante en la rama afectada
 o cambiar tráfico a la restauración; al cambiar de rama también deben rotarse
 las referencias de conexión y comprobar Microsoft Entra/GCS por separado.
 
-La expectativa de RPO/RTO se registra con el resultado real, no con una
-suposición del plan. La automatización de respaldos lógicos y su retención no
+La primera práctica mide y registra el tiempo observado y el punto de
+recuperación/RPO conseguido; esos resultados describen el ejercicio, no fijan
+los objetivos de servicio. Los valores de RPO/RTO de producción quedan TBD
+hasta que se acuerden explícitamente. La automatización de respaldos lógicos y su retención no
 forma parte de este T8; si la ventana de Neon no cubre el piloto, el dueño de
 Infra debe proponer almacenamiento privado y una política aceptada antes de
 usar datos reales.
@@ -103,4 +111,5 @@ usar datos reales.
 | Datos y configuración heredados (`neon_auth` incluido) clasificados y aprobados | Pendiente de operador; conteos agregados no bastan |
 | Rama desechable desde un instante histórico | Pendiente; no ejecutar sobre production |
 | Conteos, FK y atribución histórica validados | Verificador preparado en Backend PR34; ejecución histórica pendiente de T9a/dataset aprobado |
-| RPO/RTO, operador y reconnect documentados | Pendiente de la prueba |
+| Tiempo y RPO observados en el ensayo | Pendiente de PITR; no define objetivos de servicio |
+| RPO/RTO de producción, operador y reconnect documentados | RPO/RTO TBD; operador/reconnect pendientes |

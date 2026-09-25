@@ -109,7 +109,13 @@ el orquestador ejecutó y verificó los resultados reales.
 - Production queda pendiente del pipeline y de preparación de recuperación.
 - El test negativo entre ambientes sigue pendiente; el login positivo y los
   grants no lo sustituyen.
-- T9b, catálogo aprobado y servicios de negocio siguen pendientes.
+- Estado observado al 2026-09-11: T9b, catálogo aprobado y servicios de
+  negocio seguían pendientes.
+- Nota posterior (2026-09-25): este renglón describe el estado observado el
+  2026-09-11. El catálogo de referencia aprobado pertenece a todos los
+  ambientes; datos demo sintéticos son solo para Neon `dev` y desarrollo
+  local. No refrescar staging desde un dev sembrado. Esta aclaración no afirma
+  que un seed se haya ejecutado.
 - Este es un registro histórico al 2026-09-11: entonces se mantenían tres
   ambientes Neon (dev/staging/production), y Git `preprod` todavía no era un
   GitHub Environment configurado. La revalidación del 2026-09-24 observó el
