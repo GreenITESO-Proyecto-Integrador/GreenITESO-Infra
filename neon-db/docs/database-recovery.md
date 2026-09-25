@@ -26,9 +26,12 @@ ventana visible.
 ## Ensayo en una rama desechable
 
 1. Confirma por escrito el proyecto, la rama fuente y la ventana del ensayo.
-   Verifica antes de cualquier operación que `dev` contiene solo datos
-   sintéticos aprobados; si no puedes confirmarlo, detén el ensayo. Nunca uses
-   `production` como origen del ensayo ni como destino de escritura.
+   Revisa todos los esquemas que heredará la rama, no solo las tablas públicas
+   de Django. Confirma que `dev` no contiene datos de personas y que el dataset
+   sintético y la configuración heredada están aprobados para clonarse. Neon
+   Auth tiene un `project_config` cuya fila debe clasificar el operador sin
+   publicar su contenido. Si falta esa confirmación, detén el ensayo. Nunca
+   uses `production` como origen del ensayo ni como destino de escritura.
 2. En `dev`, coordina una ventana con los tres equipos. Usa el dataset sintético
    aprobado para desarrollo y registra conteos e integridad. Si el dataset de
    Backend aún no existe, detén la prueba y registra el bloqueo. Define
@@ -65,7 +68,9 @@ ventana visible.
    `verify-full` guardada fuera del repositorio. El comando impone una
    transacción `READ ONLY`. Sigue los comandos y límites de la guía Backend.
    Debe comprobar migraciones, conteos y huellas de todas las tablas Django
-   gestionadas, referencias foráneas, marcadores y atribución histórica.
+   gestionadas, referencias foráneas, marcadores y atribución histórica. No
+   valida las tablas internas de `neon_auth`: su revisión es un gate separado
+   del paso 1.
 7. Guarda el timestamp, branch ID, duración, resultado y el hash de la
    consulta/script en evidencia operativa de acceso restringido. Publica en
    `docs/evidence/` o en el ticket solo metadatos revisados como aptos para
@@ -95,6 +100,7 @@ usar datos reales.
 | Evidencia | Estado |
 | --- | --- |
 | Capacidades/retención copiadas de la cuenta | Inventario T1/T6 disponible; reconfirmar al ejecutar |
+| Datos y configuración heredados (`neon_auth` incluido) clasificados y aprobados | Pendiente de operador; conteos agregados no bastan |
 | Rama desechable desde un instante histórico | Pendiente; no ejecutar sobre production |
 | Conteos, FK y atribución histórica validados | Verificador preparado en Backend PR34; ejecución histórica pendiente de T9a/dataset aprobado |
 | RPO/RTO, operador y reconnect documentados | Pendiente de la prueba |
