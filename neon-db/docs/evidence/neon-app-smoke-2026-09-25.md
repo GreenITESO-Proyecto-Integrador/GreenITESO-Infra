@@ -1,7 +1,11 @@
 # Neon app-role smoke — 2026-09-25
 
-Read-only verification from a local macOS process using the unpublished
-Backend PR30 worktree at `822ba01` (`db_smoke --timeout 15 --check-grants`).
+Read-only verification from a local macOS process using Backend commit
+`822ba01457e87851aa5a3cc126e2e4b364b346fe` (`db_smoke --timeout 15
+--check-grants`). At the time of this check the commit was **unpublished**, a
+local child of Backend PR30's remote head
+`c4ec42467cba7f0a3393f93b944cd114fec179b4`; it was not yet part of
+GitHub PR30. This evidence records the locally tested code, not a GitHub run.
 This is not evidence of a Cloud Run deployment or of a migration being run by
 the new release workflow. No DDL, DML, seed or production connection occurred.
 

@@ -53,7 +53,8 @@ dependencia de migración explícita. P10 fue ratificada por Fernando el
 Fernando confirmó además el 2026-09-25 que todos los registros enviados,
 incluidos `REJECTED`, consumen el límite diario; la regla semanal se difiere.
 Esta regla de negocio no implica que un despliegue o una comprobación cloud se
-hayan ejecutado. Las decisiones P3, P8 y P9 pertenecen al esquema aprobado;
+hayan ejecutado. El esquema de P3/P8/P9 fue aprobado como parte del
+[diagrama 9 registrado en T9](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/9);
 las políticas de servicio P3/P8/P9 y P11 continúan pendientes de ratificación.
 Las implementaciones exploratorias restantes no se deben presentar como
 decisiones ni evidencia ejecutada.
