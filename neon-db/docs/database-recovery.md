@@ -25,14 +25,22 @@ ventana visible.
 
 ## Ensayo en una rama desechable
 
-1. Confirma por escrito el proyecto, la rama fuente y el instante UTC. Nunca
+1. Confirma por escrito el proyecto, la rama fuente y la ventana del ensayo. Nunca
    uses `production` como destino de escritura.
 2. En `dev`, coordina una ventana con los tres equipos. Usa el dataset sintético
-   aprobado para desarrollo y registra conteos, integridad y un instante UTC
-   posterior a su confirmación (punto T). Si el dataset de Backend aún no
-   existe, detén la prueba y registra el bloqueo.
-3. Después de T, agrega una marca sintética adicional identificable y confirma
-   la transacción. La restauración a T debe conservar los datos previos y no
+   aprobado para desarrollo y registra conteos e integridad. Si el dataset de
+   Backend aún no existe, detén la prueba y registra el bloqueo. Define
+   `PRE_MARKER_ID` con el UUID de un `ActionLog` sintético ya existente y
+   `POST_MARKER_ID` con un UUID sintético reservado que aún no existe. Carga
+   `DB_RECOVERY_MARKER_HMAC_KEY` (mínimo 32 bytes) desde el gestor de secretos
+   y conserva la **misma clave** hasta comparar; no la guardes junto al
+   baseline. Ejecuta `db_recovery_verify --write-baseline` con
+   [la guía Backend](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/02d7ffc1bd8b21f938b9461750941d3f73a863df/docs/database-recovery-verifier.md)
+   antes de T. Coordina la ventana para que no haya otras escrituras entre la
+   captura del baseline y T.
+3. Confirma un instante UTC posterior al baseline (punto T). Después de T,
+   agrega el `ActionLog` sintético con `POST_MARKER_ID` y confirma la
+   transacción. La restauración a T debe conservar los datos previos y no
    contener esta marca posterior. Registra únicamente IDs sintéticos, tiempos
    UTC y conteos; nunca credenciales, fotos ni datos personales.
 4. En Neon Console crea una rama nueva desde el punto de tiempo anterior,
@@ -44,18 +52,14 @@ ventana visible.
    temporal se entrega al verificador mediante el gestor de secretos; no se
    imprime ni se escribe en el runbook.
 
-6. Ejecuta el comando suministrado por Backend
+6. Compara la rama restaurada con el comando suministrado por Backend
    ([PR34, verificador y uso](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/pull/34))
-   desde un proceso operador local aislado. El rol de solo lectura aún no está
-   provisionado; usa la credencial app de la rama autorizada con una URL
+   desde un proceso operador local aislado, usando `--baseline` y los mismos
+   IDs y clave HMAC del paso 2. El rol de solo lectura aún no está provisionado;
+   la credencial app de la rama autorizada **puede escribir**: úsala solo para
+   este verificador, con `DJANGO_DEPLOYED=false`, `DJANGO_ENV=dev` y una URL
    `verify-full` guardada fuera del repositorio. El comando impone una
-   transacción `READ ONLY`. Antes de T, define `PRE_MARKER_ID` con el UUID de un
-   `ActionLog` sintético ya existente y `POST_MARKER_ID` con un UUID sintético
-   reservado que aún no existe. Carga `DB_RECOVERY_MARKER_HMAC_KEY` (mínimo 32
-   bytes) desde el gestor de secretos y conserva la **misma clave** hasta
-   comparar; no la guardes junto al baseline. `--write-baseline` captura evidencia antes de T; tras crear y confirmar el
-   marcador posterior, `--baseline` compara la rama restaurada. Sigue los
-   comandos y límites de [la guía Backend](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/02d7ffc1bd8b21f938b9461750941d3f73a863df/docs/database-recovery-verifier.md).
+   transacción `READ ONLY`. Sigue los comandos y límites de la guía Backend.
    Debe comprobar migraciones, conteos y huellas de todas las tablas Django
    gestionadas, referencias foráneas, marcadores y atribución histórica.
 7. Guarda en `docs/evidence/` (o en el ticket de operaciones, solo metadatos aptos para publicación) el
