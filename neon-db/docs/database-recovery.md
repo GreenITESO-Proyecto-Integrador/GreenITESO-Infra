@@ -44,10 +44,20 @@ ventana visible.
    temporal se entrega al verificador mediante el gestor de secretos; no se
    imprime ni se escribe en el runbook.
 
-6. Con una credencial temporal de lectura, ejecuta el comando de verificación
-   suministrado por Backend ([PR34, verificador y uso](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/pull/34)). `db_recovery_verify --write-baseline` captura evidencia antes de T y `--baseline` la compara en la rama restaurada. Debe comprobar: migraciones esperadas, conteos de
-   tablas, claves foráneas, un `ActionLog` aprobado/pending/rejected, la
-   atribución a clanes congelada y la suma de puntos histórica.
+6. Ejecuta el comando suministrado por Backend
+   ([PR34, verificador y uso](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/pull/34))
+   desde un proceso operador local aislado. El rol de solo lectura aún no está
+   provisionado; usa la credencial app de la rama autorizada con una URL
+   `verify-full` guardada fuera del repositorio. El comando impone una
+   transacción `READ ONLY`. Antes de T, define `PRE_MARKER_ID` con el UUID de un
+   `ActionLog` sintético ya existente y `POST_MARKER_ID` con un UUID sintético
+   reservado que aún no existe. Carga `DB_RECOVERY_MARKER_HMAC_KEY` (mínimo 32
+   bytes) desde el gestor de secretos y conserva la **misma clave** hasta
+   comparar; no la guardes junto al baseline. `--write-baseline` captura evidencia antes de T; tras crear y confirmar el
+   marcador posterior, `--baseline` compara la rama restaurada. Sigue los
+   comandos y límites de [la guía Backend](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/02d7ffc1bd8b21f938b9461750941d3f73a863df/docs/database-recovery-verifier.md).
+   Debe comprobar migraciones, conteos y huellas de todas las tablas Django
+   gestionadas, referencias foráneas, marcadores y atribución histórica.
 7. Guarda en `docs/evidence/` (o en el ticket de operaciones, solo metadatos aptos para publicación) el
    timestamp, branch ID, duración, resultado y el hash de la consulta/script.
    No guardes la cadena de conexión.
