@@ -135,6 +135,16 @@ SELECT format(
   :'schema_name', :'app_role'
 ) \gexec
 
+-- Django's migration ledger is a release-control table, not runtime data.
+-- Keep it readable by the app for diagnostics, but only the migrator may
+-- record, alter, or remove applied-migration rows. Run this after the broad
+-- existing-table grant so the exception is preserved on a bootstrap rerun.
+SELECT format(
+  'REVOKE INSERT, UPDATE, DELETE ON TABLE %I.django_migrations FROM %I',
+  :'schema_name', :'app_role'
+)
+WHERE to_regclass(format('%I.django_migrations', :'schema_name')) IS NOT NULL \gexec
+
 -- The migration role can run data backfills and create new objects in the
 -- schema. ALTER/DROP of an existing object remains limited by PostgreSQL
 -- ownership; do not pretend a GRANT can bypass that rule. Existing production

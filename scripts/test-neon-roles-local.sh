@@ -139,6 +139,21 @@ PGSERVICEFILE="$service_file" "$psql_bin" -X service=staging_migrator -v ON_ERRO
 PGSERVICEFILE="$service_file" "$psql_bin" -X service=staging_app -v ON_ERROR_STOP=1 \
   -c "INSERT INTO role_probe (payload) VALUES ('dml-ok'); SELECT count(*) AS app_rows FROM role_probe;"
 
+# A migration-created ledger inherits generic DML until the role bootstrap
+# reapplies the special read-only exception. Test both the remediation and
+# verification; ordinary application tables must remain writable.
+PGSERVICEFILE="$service_file" "$psql_bin" -X service=staging_migrator -v ON_ERROR_STOP=1 \
+  -c 'CREATE TABLE django_migrations (id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY, app text NOT NULL, name text NOT NULL);'
+scripts/neon-role-apply.sh --environment staging --service staging_owner \
+  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$staging_port" --allow-existing-owners --local-test >/dev/null
+if PGSERVICEFILE="$service_file" "$psql_bin" -X service=staging_app -v ON_ERROR_STOP=1 \
+  -c "INSERT INTO django_migrations (app, name) VALUES ('fake', '0001');" >/dev/null 2>&1; then
+  printf '%s\n' 'FAIL: app role wrote the migration ledger' >&2
+  exit 1
+fi
+PGSERVICEFILE="$service_file" "$psql_bin" -X service=staging_app -v ON_ERROR_STOP=1 \
+  -c 'SELECT count(*) FROM django_migrations;' >/dev/null
+
 if PGSERVICEFILE="$service_file" "$psql_bin" -X service=staging_app -v ON_ERROR_STOP=1 \
   -c 'CREATE TABLE app_ddl_must_fail (id integer);' >/dev/null 2>&1; then
   printf '%s\n' 'FAIL: app role executed DDL' >&2
