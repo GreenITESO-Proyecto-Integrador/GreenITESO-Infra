@@ -109,7 +109,7 @@ if scripts/neon-role-verify.sh --environment staging --service staging_owner \
   exit 1
 fi
 "$psql_bin" -h 127.0.0.1 -p "$production_port" -U postgres -d neondb -v ON_ERROR_STOP=1 \
-  -c 'CREATE ROLE greeniteso_production_migrator LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS; GRANT greeniteso_production_migrator TO neondb_owner WITH INHERIT TRUE, SET FALSE, ADMIN TRUE;' >/dev/null
+  -c 'CREATE ROLE greeniteso_production_migrator LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS; GRANT greeniteso_production_migrator TO neondb_owner WITH INHERIT FALSE, SET FALSE, ADMIN TRUE;' >/dev/null
 scripts/neon-role-apply.sh --environment production --service production_owner \
   --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$production_port" \
   --allow-production --local-test >/dev/null
@@ -140,8 +140,8 @@ PGSERVICEFILE="$service_file" "$psql_bin" -X service=production_app -v ON_ERROR_
   -c 'SELECT count(*) FROM django_migrations;' >/dev/null
 production_membership=$($psql_bin -h 127.0.0.1 -p "$production_port" -U postgres -d neondb -Atqc \
   "SELECT inherit_option || '|' || set_option || '|' || admin_option FROM pg_auth_members membership JOIN pg_roles member ON member.oid = membership.member JOIN pg_roles granted_role ON granted_role.oid = membership.roleid WHERE member.rolname = 'neondb_owner' AND granted_role.rolname = 'greeniteso_production_migrator';")
-[[ $production_membership == 'true|false|true' ]] || {
-  printf 'FAIL: ADMIN TRUE/SET FALSE owner membership was not preserved (%s)\n' "$production_membership" >&2
+[[ $production_membership == 'false|false|true' ]] || {
+  printf 'FAIL: ADMIN-only owner membership was not preserved (%s)\n' "$production_membership" >&2
   exit 1
 }
 app_idle_timeout=$(PGSERVICEFILE="$service_file" "$psql_bin" -X service=production_app -Atqc \
