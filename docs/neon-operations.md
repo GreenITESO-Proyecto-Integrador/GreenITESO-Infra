@@ -100,6 +100,9 @@ crean con [sql/neon_roles.sql](../sql/neon_roles.sql). El script:
 - exceptúa `django_migrations`: el app conserva `SELECT`, pero sólo el
   migrator puede insertar, actualizar o borrar filas del ledger; vuelve a
   aplicar/verificar los grants después de crear o restaurar ese objeto;
+- reaplica los grants de tablas existentes por propietario: el owner SQL no
+  siempre hereda el rol migrator en Neon; una concesión `ON ALL TABLES` desde
+  el owner fallaría al encontrar tablas creadas por migraciones;
 - configura `ALTER DEFAULT PRIVILEGES` para el rol que realmente crea los
   objetos de migración, de modo que una tabla o secuencia nueva otorgue al app
   el DML previsto;

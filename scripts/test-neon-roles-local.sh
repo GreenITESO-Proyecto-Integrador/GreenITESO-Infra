@@ -115,6 +115,29 @@ scripts/neon-role-apply.sh --environment production --service production_owner \
   --allow-production --local-test >/dev/null
 scripts/neon-role-verify.sh --environment production --service production_owner \
   --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$production_port" --local-test >/dev/null
+
+# Fresh Neon-style owner membership has ADMIN but no INHERIT/SET. A migration
+# created by the migrator must still permit a role-bootstrap rerun, and the
+# verifier must detect and then clear the default app DML grant on the ledger.
+PGSERVICEFILE="$service_file" "$psql_bin" -X service=production_migrator -v ON_ERROR_STOP=1 \
+  -c 'CREATE TABLE django_migrations (id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY, app text NOT NULL, name text NOT NULL);' >/dev/null
+if scripts/neon-role-verify.sh --environment production --service production_owner \
+  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$production_port" --local-test >/dev/null 2>&1; then
+  printf '%s\n' 'FAIL: verifier accepted app DML on a fresh migration ledger' >&2
+  exit 1
+fi
+scripts/neon-role-apply.sh --environment production --service production_owner \
+  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$production_port" \
+  --allow-production --allow-existing-owners --local-test >/dev/null
+scripts/neon-role-verify.sh --environment production --service production_owner \
+  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$production_port" --local-test >/dev/null
+if PGSERVICEFILE="$service_file" "$psql_bin" -X service=production_app -v ON_ERROR_STOP=1 \
+  -c "INSERT INTO django_migrations (app, name) VALUES ('fake', '0001');" >/dev/null 2>&1; then
+  printf '%s\n' 'FAIL: production app role wrote the migration ledger' >&2
+  exit 1
+fi
+PGSERVICEFILE="$service_file" "$psql_bin" -X service=production_app -v ON_ERROR_STOP=1 \
+  -c 'SELECT count(*) FROM django_migrations;' >/dev/null
 production_membership=$($psql_bin -h 127.0.0.1 -p "$production_port" -U postgres -d neondb -Atqc \
   "SELECT inherit_option || '|' || set_option || '|' || admin_option FROM pg_auth_members membership JOIN pg_roles member ON member.oid = membership.member JOIN pg_roles granted_role ON granted_role.oid = membership.roleid WHERE member.rolname = 'neondb_owner' AND granted_role.rolname = 'greeniteso_production_migrator';")
 [[ $production_membership == 'true|false|true' ]] || {

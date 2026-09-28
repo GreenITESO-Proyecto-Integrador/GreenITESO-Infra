@@ -124,26 +124,42 @@ SELECT format(
   :'app_role', :'database_name', '60s'
 ) \gexec
 
--- Existing tables and sequences: the app can perform ordinary Django DML,
--- including sequence-backed inserts, but cannot create/alter/drop objects.
+-- Grant only objects owned by the current owner in this phase. A fresh Neon
+-- owner is not necessarily an inheriting member of the migrator role, so an
+-- ON ALL TABLES grant would fail as soon as migrations create new objects.
+-- Migrator-owned objects are granted below while SET ROLE is active.
 SELECT format(
-  'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA %I TO %I',
-  :'schema_name', :'app_role'
-) \gexec
+  'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE %I.%I TO %I',
+  namespace.nspname, relation.relname, :'app_role'
+)
+FROM pg_class relation
+JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
+WHERE namespace.nspname = :'schema_name'
+  AND relation.relkind IN ('r', 'p', 'v', 'm', 'f')
+  AND relation.relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user) \gexec
 SELECT format(
-  'GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA %I TO %I',
-  :'schema_name', :'app_role'
-) \gexec
+  'GRANT USAGE, SELECT ON SEQUENCE %I.%I TO %I',
+  namespace.nspname, relation.relname, :'app_role'
+)
+FROM pg_class relation
+JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
+WHERE namespace.nspname = :'schema_name'
+  AND relation.relkind = 'S'
+  AND relation.relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user) \gexec
 
 -- Django's migration ledger is a release-control table, not runtime data.
 -- Keep it readable by the app for diagnostics, but only the migrator may
--- record, alter, or remove applied-migration rows. Run this after the broad
--- existing-table grant so the exception is preserved on a bootstrap rerun.
+-- record, alter, or remove applied-migration rows. The owner can revoke only
+-- its own grants here; the migrator-owned case is handled after SET ROLE.
 SELECT format(
-  'REVOKE INSERT, UPDATE, DELETE ON TABLE %I.django_migrations FROM %I',
-  :'schema_name', :'app_role'
+  'REVOKE INSERT, UPDATE, DELETE ON TABLE %I.%I FROM %I',
+  namespace.nspname, relation.relname, :'app_role'
 )
-WHERE to_regclass(format('%I.django_migrations', :'schema_name')) IS NOT NULL \gexec
+FROM pg_class relation
+JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
+WHERE namespace.nspname = :'schema_name'
+  AND relation.relname = 'django_migrations'
+  AND relation.relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user) \gexec
 
 -- The migration role can run data backfills and create new objects in the
 -- schema. ALTER/DROP of an existing object remains limited by PostgreSQL
@@ -151,13 +167,23 @@ WHERE to_regclass(format('%I.django_migrations', :'schema_name')) IS NOT NULL \g
 -- owners must be reviewed explicitly before an ownership transfer or owner-run
 -- migration is authorized.
 SELECT format(
-  'GRANT SELECT, INSERT, UPDATE, DELETE, REFERENCES, TRIGGER ON ALL TABLES IN SCHEMA %I TO %I',
-  :'schema_name', :'migrator_role'
-) \gexec
+  'GRANT SELECT, INSERT, UPDATE, DELETE, REFERENCES, TRIGGER ON TABLE %I.%I TO %I',
+  namespace.nspname, relation.relname, :'migrator_role'
+)
+FROM pg_class relation
+JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
+WHERE namespace.nspname = :'schema_name'
+  AND relation.relkind IN ('r', 'p', 'v', 'm', 'f')
+  AND relation.relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user) \gexec
 SELECT format(
-  'GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA %I TO %I',
-  :'schema_name', :'migrator_role'
-) \gexec
+  'GRANT USAGE, SELECT, UPDATE ON SEQUENCE %I.%I TO %I',
+  namespace.nspname, relation.relname, :'migrator_role'
+)
+FROM pg_class relation
+JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
+WHERE namespace.nspname = :'schema_name'
+  AND relation.relkind = 'S'
+  AND relation.relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user) \gexec
 
 -- Defaults must be attached to the role that actually creates migration
 -- objects. A Neon SQL owner can create the roles but may not be a member of a
@@ -212,6 +238,33 @@ SELECT NOT EXISTS (
 SELECT format('GRANT %I TO %I WITH SET TRUE', :'migrator_role', current_user)
 WHERE :'owner_needs_migrator_grant' = 't' \gexec
 SET ROLE :'migrator_role';
+SELECT format(
+  'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE %I.%I TO %I',
+  namespace.nspname, relation.relname, :'app_role'
+)
+FROM pg_class relation
+JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
+WHERE namespace.nspname = :'schema_name'
+  AND relation.relkind IN ('r', 'p', 'v', 'm', 'f')
+  AND relation.relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user) \gexec
+SELECT format(
+  'GRANT USAGE, SELECT ON SEQUENCE %I.%I TO %I',
+  namespace.nspname, relation.relname, :'app_role'
+)
+FROM pg_class relation
+JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
+WHERE namespace.nspname = :'schema_name'
+  AND relation.relkind = 'S'
+  AND relation.relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user) \gexec
+SELECT format(
+  'REVOKE INSERT, UPDATE, DELETE ON TABLE %I.%I FROM %I',
+  namespace.nspname, relation.relname, :'app_role'
+)
+FROM pg_class relation
+JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
+WHERE namespace.nspname = :'schema_name'
+  AND relation.relname = 'django_migrations'
+  AND relation.relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user) \gexec
 SELECT format(
   'ALTER ROLE %I IN DATABASE %I SET lock_timeout = %L',
   :'migrator_role', :'database_name', '5s'
