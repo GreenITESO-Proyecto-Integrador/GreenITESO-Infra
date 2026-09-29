@@ -109,6 +109,14 @@ aprobación específica de su clasificación; **no se debe repetir esa excepció
 Antes de otro ensayo, el operador debe clasificarla y aprobar expresamente el
 origen/ramas temporales. [Evidencia operativa redactada en Infra #8](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/8#issuecomment-5880431562).
 
+La [clasificación de solo lectura del 2026-09-29](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/8#issuecomment-5890268021)
+en `dev` encontró configuración de autenticación activa (OAuth social,
+contraseña/correo y plugin de organización); los webhooks están deshabilitados.
+No se recuperaron secretos ni valores de configuración. Por tanto, no se cumple
+la condición de repetir el clon solo si no hay integraciones activas: el
+verificador en rama PITR queda pausado hasta que el operador apruebe controles
+específicos para una rama desechable o una alternativa segura.
+
 ## Recuperación de un ambiente real
 
 Ante pérdida o corrupción, el operador congela el despliegue y registra el
