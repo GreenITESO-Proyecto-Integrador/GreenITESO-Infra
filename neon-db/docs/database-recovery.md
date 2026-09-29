@@ -92,7 +92,8 @@ El proyecto informó retención de 21,600 s (6 h), límite de 10 ramas y tres
 ramas permanentes. El baseline de `dev` tenía 20 usuarios sintéticos, cinco
 clanes, 24 ActionLog, cuatro campañas, cinco misiones y 38 migraciones. Una
 primera rama histórica anterior a la inserción del seed devolvió cero filas de
-dominio; se eliminó. Una segunda rama, solicitada a las 22:45 UTC, informó
+dominio; se eliminó. Para la segunda rama se solicitó el punto de recuperación
+22:45 UTC; la rama informó
 `parent_timestamp` 22:41:28 UTC (3 min 32 s anterior al instante solicitado)
 y estuvo lista aproximadamente un segundo después de su creación a las
 23:13:36 UTC. Recuperó los conteos del baseline,
