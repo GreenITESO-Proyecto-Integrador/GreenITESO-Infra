@@ -1,10 +1,11 @@
 # Recuperación de base de datos (T8)
 
 Este runbook describe cómo inspeccionar y probar una recuperación de Neon sin
-tocar `production`. La prueba obligatoria se hará con datos sintéticos
-migrados y una rama desechable. La secuencia siguiente es un plan; no afirma
-que la prueba, sus verificaciones ni los tiempos se hayan ejecutado u
-observado. El RPO/RTO del servicio en producción sigue por definir.
+tocar `production`. El 2026-09-28 se ejecutó un ensayo **parcial** de PITR desde
+`dev` con datos sintéticos, conteos y FK; se documenta abajo. La secuencia
+siguiente sigue siendo el procedimiento objetivo con el verificador de Backend
+PR #34, que **no** se ejecutó en aquella rama. El RPO/RTO del servicio en
+producción sigue por definir.
 
 ## Roles y límites
 
@@ -45,7 +46,7 @@ ventana visible.
    `DB_RECOVERY_MARKER_HMAC_KEY` (mínimo 32 bytes) desde el gestor de secretos
    y conserva la **misma clave** hasta comparar; no la guardes junto al
    baseline. Ejecuta `db_recovery_verify --write-baseline` con
-   [la guía Backend](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/fa288bd427ed9b60d01347fee90a975901f491ae/docs/database-recovery-verifier.md)
+   [la guía Backend](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/98eccb72ee49ce1850a9d3b251df5349e74af0bf/docs/database-recovery-verifier.md)
    antes de T. Coordina la ventana para que no haya otras escrituras entre la
    captura del baseline y T. Conserva el JSON del baseline con acceso
    restringido, fuera del repositorio. No refresques staging desde un dev con
@@ -66,7 +67,7 @@ ventana visible.
    imprime ni se escribe en el runbook.
 
 6. Compara la rama restaurada con el comando suministrado por Backend
-   ([PR34, guía fijada al SHA publicado](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/fa288bd427ed9b60d01347fee90a975901f491ae/docs/database-recovery-verifier.md))
+   ([PR34, guía fijada al SHA publicado](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/98eccb72ee49ce1850a9d3b251df5349e74af0bf/docs/database-recovery-verifier.md))
    desde un proceso operador local aislado, usando `--baseline` y los mismos
    IDs y clave HMAC del paso 2. El rol de solo lectura aún no está provisionado;
    la credencial app de la rama autorizada **puede escribir**: úsala solo para
@@ -84,6 +85,28 @@ ventana visible.
 8. Elimina la rama desechable cuando el operador y el revisor hayan aceptado
    la evidencia. Si la prueba falla, conserva la rama solo con aprobación y
    fecha de expiración, y abre una corrección.
+
+## Ensayo parcial observado — 2026-09-28 UTC
+
+El proyecto informó retención de 21,600 s (6 h), límite de 10 ramas y tres
+ramas permanentes. El baseline de `dev` tenía 20 usuarios sintéticos, cinco
+clanes, 24 ActionLog, cuatro campañas, cinco misiones y 38 migraciones. Una
+primera rama histórica anterior a la inserción del seed devolvió cero filas de
+dominio; se eliminó. Una segunda rama, solicitada a las 22:45 UTC, informó
+`parent_timestamp` 22:41:28 UTC (3 min 32 s anterior al instante solicitado)
+y estuvo lista aproximadamente un segundo después de su creación a las
+23:13:36 UTC. Recuperó los conteos del baseline,
+con 33 FK públicas validadas y cero huérfanos en las relaciones muestreadas.
+Ambas ramas desechables se eliminaron; quedaron solo `dev`, `staging` y
+`production`. El segundo de disponibilidad del control plane **no** es RTO de
+un incidente, y el desfase entre punto solicitado y restaurado no fija un RPO.
+
+Este ensayo no ejecutó el verificador del PR #34, no comprobó su huella de
+contenido ni la atribución histórica completa y no inspeccionó el contenido de
+`neon_auth.project_config`. Se clonó la fila heredada sin constancia de una
+aprobación específica de su clasificación; **no se debe repetir esa excepción**.
+Antes de otro ensayo, el operador debe clasificarla y aprobar expresamente el
+origen/ramas temporales. [Evidencia operativa redactada en Infra #8](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/8#issuecomment-5880431562).
 
 ## Recuperación de un ambiente real
 
@@ -109,7 +132,7 @@ usar datos reales.
 | --- | --- |
 | Capacidades/retención copiadas de la cuenta | Inventario T1/T6 disponible; reconfirmar al ejecutar |
 | Datos y configuración heredados (`neon_auth` incluido) clasificados y aprobados | Pendiente de operador; conteos agregados no bastan |
-| Rama desechable desde un instante histórico | Pendiente; no ejecutar sobre production |
-| Conteos, FK y atribución histórica validados | Verificador preparado en Backend PR34; ejecución histórica pendiente de T9a/dataset aprobado |
-| Tiempo y RPO observados en el ensayo | Pendiente de PITR; no define objetivos de servicio |
+| Rama desechable desde un instante histórico | Ensayo parcial `dev` 2026-09-28; ramas eliminadas; nuevo ensayo con verificador pendiente |
+| Conteos, FK y atribución histórica validados | Conteos y 33 FK públicos en el ensayo parcial; verificador PR34 y atribución histórica completa pendientes |
+| Tiempo y RPO observados en el ensayo | ~1 s de disponibilidad control-plane y 3 min 32 s entre punto solicitado y `parent_timestamp`; RTO/RPO de incidente no establecidos |
 | RPO/RTO de producción, operador y reconnect documentados | RPO/RTO TBD; operador/reconnect pendientes |

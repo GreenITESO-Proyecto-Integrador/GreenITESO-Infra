@@ -18,6 +18,12 @@ the new release workflow. No DDL, DML, seed or production connection occurred.
 | `dev` | pooled `greeniteso_dev_app`, TLS `verify-full` | `DB_SMOKE OK`; User=0, ActionLog=0; client SSL active | 23 public tables, 9 sequences; CREATE/TRUNCATE privilege absent |
 | `staging` | pooled `greeniteso_staging_app`, TLS `verify-full` | `DB_SMOKE OK`; User=0, ActionLog=0; client SSL active | 23 public tables, 9 sequences; CREATE/TRUNCATE privilege absent |
 
+These User/ActionLog counts are the **2026-09-25 snapshot**, before the
+synthetic dev seed. A read-only recount on 2026-09-29 found `dev` with 20
+users, 24 action logs, four campaigns, five missions and 38 migration records;
+`staging` had zero rows in those domain tables and 38 migration records. The
+recount did not rerun this historical app-role smoke or validate production.
+
 The new check requires every managed Django model table (including
 auto-created M2M tables) to exist, then verifies SELECT/INSERT/UPDATE/DELETE
 grants on all public tables, sequence USAGE, schema USAGE, and denial of
@@ -34,4 +40,5 @@ copy this macOS path into GitHub or Cloud Run secrets. URLs, passwords,
 certificates and the internal `neon_auth` configuration were not recorded.
 
 Production role and migration/rollback remain unverified. The release
-workflow is still a draft PR and was not invoked for this smoke.
+workflow was a draft PR when this smoke ran and was not invoked for it; PR #30
+was ready for human review on 2026-09-29, still without a protected-merge run.
