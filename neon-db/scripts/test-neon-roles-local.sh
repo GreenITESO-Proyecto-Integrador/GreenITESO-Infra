@@ -138,6 +138,24 @@ if PGSERVICEFILE="$service_file" "$psql_bin" -X service=production_app -v ON_ERR
 fi
 PGSERVICEFILE="$service_file" "$psql_bin" -X service=production_app -v ON_ERROR_STOP=1 \
   -c 'SELECT count(*) FROM django_migrations;' >/dev/null
+# Column-level grants can bypass a table-level REVOKE on the migration ledger.
+PGSERVICEFILE="$service_file" "$psql_bin" -X service=production_migrator -v ON_ERROR_STOP=1 \
+  -c 'GRANT INSERT (app), UPDATE (name) ON django_migrations TO greeniteso_production_app; GRANT INSERT (name) ON django_migrations TO PUBLIC;' >/dev/null
+if scripts/neon-role-verify.sh --environment production --service production_owner \
+  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$production_port" --local-test >/dev/null 2>&1; then
+  printf '%s\n' 'FAIL: verifier accepted column-level ledger writes' >&2
+  exit 1
+fi
+scripts/neon-role-apply.sh --environment production --service production_owner \
+  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$production_port" \
+  --allow-production --allow-existing-owners --local-test >/dev/null
+scripts/neon-role-verify.sh --environment production --service production_owner \
+  --service-file "$service_file" --expected-host 127.0.0.1 --expected-port "$production_port" --local-test >/dev/null
+if PGSERVICEFILE="$service_file" "$psql_bin" -X service=production_app -v ON_ERROR_STOP=1 \
+  -c "INSERT INTO django_migrations (app, name) VALUES ('fake', '0002');" >/dev/null 2>&1; then
+  printf '%s\n' 'FAIL: column grants still let the app write the migration ledger' >&2
+  exit 1
+fi
 production_membership=$($psql_bin -h 127.0.0.1 -p "$production_port" -U postgres -d neondb -Atqc \
   "SELECT inherit_option || '|' || set_option || '|' || admin_option FROM pg_auth_members membership JOIN pg_roles member ON member.oid = membership.member JOIN pg_roles granted_role ON granted_role.oid = membership.roleid WHERE member.rolname = 'neondb_owner' AND granted_role.rolname = 'greeniteso_production_migrator';")
 [[ $production_membership == 'false|false|true' ]] || {
@@ -176,6 +194,7 @@ if PGSERVICEFILE="$service_file" "$psql_bin" -X service=staging_app -v ON_ERROR_
 fi
 PGSERVICEFILE="$service_file" "$psql_bin" -X service=staging_app -v ON_ERROR_STOP=1 \
   -c 'SELECT count(*) FROM django_migrations;' >/dev/null
+
 
 if PGSERVICEFILE="$service_file" "$psql_bin" -X service=staging_app -v ON_ERROR_STOP=1 \
   -c 'CREATE TABLE app_ddl_must_fail (id integer);' >/dev/null 2>&1; then

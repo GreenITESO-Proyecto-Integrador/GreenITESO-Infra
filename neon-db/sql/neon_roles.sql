@@ -160,6 +160,19 @@ JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
 WHERE namespace.nspname = :'schema_name'
   AND relation.relname = 'django_migrations'
   AND relation.relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user) \gexec
+-- Table REVOKE does not remove grants made on individual ledger columns.
+SELECT format(
+  'REVOKE INSERT (%I), UPDATE (%I) ON TABLE %I.%I FROM PUBLIC, %I',
+  attribute.attname, attribute.attname, namespace.nspname, relation.relname, :'app_role'
+)
+FROM pg_attribute attribute
+JOIN pg_class relation ON relation.oid = attribute.attrelid
+JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
+WHERE namespace.nspname = :'schema_name'
+  AND relation.relname = 'django_migrations'
+  AND relation.relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user)
+  AND attribute.attnum > 0
+  AND NOT attribute.attisdropped \gexec
 
 -- The migration role can run data backfills and create new objects in the
 -- schema. ALTER/DROP of an existing object remains limited by PostgreSQL
@@ -265,6 +278,19 @@ JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
 WHERE namespace.nspname = :'schema_name'
   AND relation.relname = 'django_migrations'
   AND relation.relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user) \gexec
+-- Migrator-owned ledgers need the same column-level exception as owner-owned ledgers.
+SELECT format(
+  'REVOKE INSERT (%I), UPDATE (%I) ON TABLE %I.%I FROM PUBLIC, %I',
+  attribute.attname, attribute.attname, namespace.nspname, relation.relname, :'app_role'
+)
+FROM pg_attribute attribute
+JOIN pg_class relation ON relation.oid = attribute.attrelid
+JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
+WHERE namespace.nspname = :'schema_name'
+  AND relation.relname = 'django_migrations'
+  AND relation.relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user)
+  AND attribute.attnum > 0
+  AND NOT attribute.attisdropped \gexec
 SELECT format(
   'ALTER ROLE %I IN DATABASE %I SET lock_timeout = %L',
   :'migrator_role', :'database_name', '5s'
