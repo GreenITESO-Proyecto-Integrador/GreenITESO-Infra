@@ -136,6 +136,31 @@ BEGIN
     RAISE EXCEPTION 'app role has an extra relation privilege or grant option';
   END IF;
 
+  IF to_regclass(format('%I.django_migrations', schema_name)) IS NOT NULL
+     AND (
+       NOT has_table_privilege(app_role, format('%I.django_migrations', schema_name), 'SELECT')
+       OR has_table_privilege(app_role, format('%I.django_migrations', schema_name), 'INSERT')
+       OR has_table_privilege(app_role, format('%I.django_migrations', schema_name), 'UPDATE')
+       OR has_table_privilege(app_role, format('%I.django_migrations', schema_name), 'DELETE')
+     ) THEN
+    RAISE EXCEPTION 'app role must have read-only access to django_migrations';
+  END IF;
+  IF EXISTS (
+    SELECT 1
+    FROM pg_class relation
+    JOIN pg_namespace ns ON ns.oid = relation.relnamespace
+    JOIN pg_attribute attribute ON attribute.attrelid = relation.oid
+    CROSS JOIN LATERAL aclexplode(attribute.attacl) acl
+    WHERE ns.nspname = schema_name
+      AND relation.relname = 'django_migrations'
+      AND attribute.attnum > 0
+      AND NOT attribute.attisdropped
+      AND acl.grantee IN (0, (SELECT oid FROM pg_roles WHERE rolname = app_role))
+      AND acl.privilege_type IN ('INSERT', 'UPDATE')
+  ) THEN
+    RAISE EXCEPTION 'app role or PUBLIC retains column-level write access to django_migrations';
+  END IF;
+
   IF EXISTS (
     SELECT 1
     FROM pg_class relation
