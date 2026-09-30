@@ -127,8 +127,9 @@ Después, el aprobador elige entre corregir hacia adelante en la rama afectada
 o cambiar tráfico a la restauración; al cambiar de rama también deben rotarse
 las referencias de conexión y comprobar Microsoft Entra/GCS por separado.
 
-La primera práctica mide y registra el tiempo observado y el punto de
-recuperación/RPO conseguido; esos resultados describen el ejercicio, no fijan
+La primera práctica mide y registra el tiempo observado y el desfase entre el
+punto solicitado y el `parent_timestamp` (desfase del punto de restauración);
+esos resultados describen el ejercicio, no fijan
 los objetivos de servicio. Los valores de RPO/RTO de producción quedan TBD
 hasta que se acuerden explícitamente. La automatización de respaldos lógicos y su retención no
 forma parte de este T8; si la ventana de Neon no cubre el piloto, el dueño de
@@ -143,5 +144,5 @@ usar datos reales.
 | Datos y configuración heredados (`neon_auth` incluido) clasificados y aprobados | Pendiente de operador; conteos agregados no bastan |
 | Rama desechable desde un instante histórico | Ensayo parcial `dev` 2026-09-28; ramas eliminadas; nuevo ensayo con verificador pendiente |
 | Conteos, FK y atribución histórica validados | Conteos y 33 FK públicos en el ensayo parcial; verificador PR34 y atribución histórica completa pendientes |
-| Tiempo y RPO observados en el ensayo | ~1 s de disponibilidad control-plane y 3 min 32 s entre punto solicitado y `parent_timestamp`; RTO/RPO de incidente no establecidos |
+| Tiempo y desfase del punto de restauración observados en el ensayo | ~1 s de disponibilidad control-plane y 3 min 32 s entre punto solicitado y `parent_timestamp`; RTO/RPO de incidente no establecidos |
 | RPO/RTO de producción, operador y reconnect documentados | RPO/RTO TBD; operador/reconnect pendientes |
