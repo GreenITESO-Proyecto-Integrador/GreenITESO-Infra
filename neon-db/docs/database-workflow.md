@@ -47,9 +47,17 @@ restricciones que usa el motor de puntos.
 
 El usuario personalizado debe estar decidido antes de la primera migración.
 Todo modelo que referencia otro dominio usa `settings.AUTH_USER_MODEL` o una
-dependencia de migración explícita. P3, P8, P9, P10 y P11 continúan pendientes
-de ratificación; las implementaciones exploratorias permanecen en borradores, sin fusionarse
-ni aplicarse a ambientes compartidos hasta registrar la decisión.
+dependencia de migración explícita. P10 fue ratificada por Fernando el
+2026-09-25: el límite diario se calcula por fecha local de
+`America/Mexico_City`, desde medianoche local hasta la siguiente medianoche.
+Fernando confirmó además el 2026-09-25 que todos los registros enviados,
+incluidos `REJECTED`, consumen el límite diario; la regla semanal se difiere.
+Esta regla de negocio no implica que un despliegue o una comprobación cloud se
+hayan ejecutado. El esquema de P3/P8/P9 fue aprobado como parte del
+[diagrama 9 registrado en T9](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/9);
+las políticas de servicio P3/P8/P9 y P11 continúan pendientes de ratificación.
+Las implementaciones exploratorias restantes no se deben presentar como
+decisiones ni evidencia ejecutada.
 
 ## Crear y revisar una migración
 
@@ -111,9 +119,15 @@ imprime en la terminal ni se pega en la documentación.
 
 No se ejecuta `neon env pull` durante onboarding. Las tareas operativas que
 necesiten CLI deben identificar proyecto y rama y usar `--no-env-pull` cuando
-esa opción exista en la versión instalada. No hay `neon.ts`, Neon Auth,
-Neon Object Storage ni ramas automáticas por PR: la autenticación acordada es
-Firebase y GCS privado es la propuesta P1 pendiente de integración.
+esa opción exista en la versión instalada. No hay `neon.ts`, integración de
+Neon Auth en la aplicación, Neon Object Storage ni ramas automáticas por PR.
+El proyecto sí contiene tablas internas `neon_auth` heredadas en Neon; no son
+el proveedor de autenticación de la aplicación ni están cubiertas por el
+verificador de modelos Django. Microsoft Entra ID se fusionó
+en Backend `dev` el 2026-09-22 (PR
+[#93](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/pull/93));
+el runtime desplegado no está verificado. GCS privado es la propuesta P1
+pendiente de integración.
 
 ## Si aparece un conflicto
 

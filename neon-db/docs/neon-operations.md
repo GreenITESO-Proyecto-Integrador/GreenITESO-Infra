@@ -12,7 +12,7 @@ después de revisar el destino.
 | --- | --- | --- | --- | --- | --- | --- |
 | dev desplegado | `greeniteso-dev` | `dev` | `br-wild-leaf-axhsrol6` | `ep-lively-brook-ax4n0pys` | `greeniteso_dev_app` | `greeniteso_dev_migrator` |
 | staging | `greeniteso-staging` | `staging` | `br-long-band-axwyo7yx` | `ep-withered-cake-axk8vlfi` | `greeniteso_staging_app` | `greeniteso_staging_migrator` |
-| producción | `greeniteso-prod` | `production` | `br-falling-forest-axgavkxc` | `ep-old-salad-axvsz82z` | `greeniteso_production_app` | `greeniteso_production_migrator` |
+| producción | `greeniteso-production` | `production` | `br-falling-forest-axgavkxc` | `ep-old-salad-axvsz82z` | `greeniteso_production_app` | `greeniteso_production_migrator` |
 
 `dev` y `staging` son ramas hijas de `production`, creadas el 2026-09-11 con
 el tamaño solicitado `0.25-1` CU y `--no-secrets`. El plan Free rechazó el
@@ -32,7 +32,7 @@ flowchart LR
   PR[Git feature / CI sin secretos de producción] --> D[Cloud Run dev\n greeniteso-dev]
   D -->|DATABASE_URL pooled\n greeniteso_dev_app| DBd[(Neon dev\n child of production)]
   S[Cloud Run staging\n greeniteso-staging] -->|DATABASE_URL pooled\n greeniteso_staging_app| DBs[(Neon staging\n child of production)]
-  P[Cloud Run production\n greeniteso-prod] -->|DATABASE_URL pooled\n greeniteso_production_app| DBp[(Neon production)]
+  P[Cloud Run production\n greeniteso-production] -->|DATABASE_URL pooled\n greeniteso_production_app| DBp[(Neon production)]
   M[One-shot migration job\n direct URL + *_migrator] --> DBd
   M --> DBs
   M --> DBp
@@ -245,13 +245,13 @@ concretos dependen del proyecto GCP que Infra/Cloud confirme; no inventar
 project IDs, regiones, servicios ni versiones. Para cada ambiente hacen falta
 como mínimo dos secretos:
 
-| Ambiente | App pooled | Migrator direct | Consumidor |
+| GitHub Environment | App pooled | Migrator direct | Consumidor |
 | --- | --- | --- | --- |
 | dev | referencia `DB_APP_POOLED_URL` | referencia `DB_MIGRATOR_DIRECT_URL` | Cloud Run dev / job de migration dev |
-| staging | referencia `DB_APP_POOLED_URL` | referencia `DB_MIGRATOR_DIRECT_URL` | Cloud Run staging / job de migration staging |
+| preprod | referencia `DB_APP_POOLED_URL` | referencia `DB_MIGRATOR_DIRECT_URL` | Cloud Run staging / job de migration staging |
 | production | referencia `DB_APP_POOLED_URL` | referencia `DB_MIGRATOR_DIRECT_URL` | Cloud Run production / job de migration production |
 
-La referencia debe ser la combinación `projects/<GCP_PROJECT_ID>/secrets/<SECRET_NAME>/versions/<VERSION>` que entregue Secret Manager. Terraform guarda el nombre y la referencia, nunca el valor; el estado debe permanecer cifrado y con acceso restringido. GitHub Actions usa secrets por environment (`dev`, `staging`, `production`); los checks de PR no reciben ningún secreto de production.
+La referencia debe ser la combinación `projects/<GCP_PROJECT_ID>/secrets/<SECRET_NAME>/versions/<VERSION>` que entregue Secret Manager. Terraform guarda el nombre y la referencia, nunca el valor; el estado debe permanecer cifrado y con acceso restringido. GitHub Actions usa secrets por Environment (`dev`, `preprod`, `production`) según el mapeo objetivo; Neon `staging` es el destino de `preprod`. Los checks de PR no reciben secretos de production.
 
 Entradas pendientes que el responsable de GCP debe aportar antes de cerrar T4:
 
@@ -316,16 +316,27 @@ pertenece al job migrator y a operaciones de respaldo.
 ## Evidencia cloud parcial
 
 [Roles y grants iniciales](evidence/neon-roles-2026-09-11.md) y
-[bootstrap del esquema en dev/staging](evidence/neon-schema-2026-09-11.md).
-Tras el renombre posterior, ambos ambientes tienen 21 tablas, 31 migraciones
-aplicadas y smoke correcto
-con el rol app pooled. Production no recibió credenciales ni migraciones de
-este bootstrap. La evidencia de contenedores locales no certifica Cloud Run.
+[bootstrap del esquema en dev/staging](evidence/neon-schema-2026-09-11.md)
+son evidencia histórica: registran 21 tablas en cada ambiente; la
+[convención/renombre del 2026-09-12](evidence/domain-table-names-2026-09-12.md)
+registra 31 migraciones. Eso no demuestra el estado actual del ledger. La
+comparación de esquema API del [2026-09-24](evidence/neon-schema-diff-2026-09-24.md)
+reporta 23 definiciones de tabla ausentes en production. Un `SELECT` de
+`django_migrations` del 2026-09-24 encontró 38 filas en cada una de dev/staging;
+las 20 migraciones de los cinco apps Backend coinciden con el SHA `7395cf7`.
+Production no recibió
+credenciales ni migraciones en el bootstrap. La evidencia de contenedores
+locales no certifica Cloud Run. Las otras diferencias dev/staging del schema
+API (`has_changes=true`) siguen pendientes de clasificación; ver la evidencia
+comparativa para el detalle y límites.
 
 
 ## Convención de tablas aplicada
 
-[Renombres verificados en dev/staging](evidence/domain-table-names-2026-09-12.md):
-21 tablas, 31 migraciones y nombres `<app>_<entidad_en_snake_case>`. Se
-conservaron identidades, recuentos, propietarios y permisos. Production no
-fue modificado por esta operación.
+[Renombres verificados en dev/staging](evidence/domain-table-names-2026-09-12.md)
+registraron 21 tablas y 31 migraciones con nombres
+`<app>_<entidad_en_snake_case>` a esa fecha. La comprobación actual de ledger
+registra 38 migraciones en cada rama y coincide con los archivos Backend del
+SHA comprobado; la comparación API aún indica cambios de schema adicionales
+entre dev/staging, por lo que no debe declararse paridad total. Production no
+fue modificado por la operación de renombre de 2026-09-12.

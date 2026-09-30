@@ -5,13 +5,10 @@
 # Persistence: the database is Neon Postgres (external to GCP), reached from
 # Cloud Run via Secret Manager references — see modules/compute and
 # neon-db/docs/neon-operations.md. There is deliberately no Cloud SQL module:
-# Neon's branch-per-environment model fits dev/preprod/prod better than
-# separate always-on Cloud SQL instances would.
+# Git dev/preprod/main maps to Neon dev/staging/production.
 #
-# Auth: Firebase Authentication (OIDC/JWT) is the agreed provider per
-# neon-db/AGENTS.md. It is not provisioned by this Terraform — Firebase
-# project setup happens in the Firebase console/CLI, out of this scaffold's
-# scope.
+# Auth: Microsoft Entra ID is the provider implemented by the Backend. It is
+# external to this Terraform scaffold and is not provisioned here.
 
 module "storage" {
   source = "./modules/storage"
@@ -65,16 +62,16 @@ module "network" {
 module "cicd" {
   source = "./modules/cicd"
 
-  project_id        = var.project_id
-  region            = var.region
-  app_name          = var.app_name
-  environment       = var.environment
-  github_repository = var.github_repository
+  project_id             = var.project_id
+  region                 = var.region
+  app_name               = var.app_name
+  environment            = var.environment
+  github_repository      = var.github_repository
+  github_trigger_enabled = var.github_trigger_enabled
   # var.environment (dev/staging/production) names the Neon branch and this
-  # GCP environment; the app repos' Git/promote branches are dev/preprod/prod
-  # (see GreenITESO-Backend & GreenITESO-Frontend .github/workflows/promote.yml).
-  # This is the one place that naming mismatch gets bridged.
-  trigger_branch = var.environment == "production" ? "prod" : var.environment == "staging" ? "preprod" : "dev"
+  # GCP environment; dev/preprod/main is the target Git mapping. The separate
+  # legacy prod workflow must remain disabled until it has the migration gate.
+  trigger_branch = var.environment == "production" ? "main" : var.environment == "staging" ? "preprod" : "dev"
 }
 
 module "monitoring" {

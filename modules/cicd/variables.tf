@@ -15,12 +15,18 @@ variable "environment" {
 }
 
 variable "github_repository" {
-  description = "owner/repo for the Cloud Build trigger source. Leave null to skip creating a trigger."
+  description = "owner/repo for the Cloud Build trigger source. Requires github_trigger_enabled=true to create a trigger."
   type        = string
   default     = null
 }
 
+variable "github_trigger_enabled" {
+  description = "Keep false until Cloud Build invokes the same reviewed database migration gate as the canonical release path."
+  type        = bool
+  default     = false
+}
+
 variable "trigger_branch" {
-  description = "Git branch that triggers a build for this environment (should match the app repo's promote-pipeline branch: dev, preprod, or prod)."
+  description = "Scaffold branch mapping (dev, preprod, or main); keep the trigger disabled until migration gating is integrated."
   type        = string
 }
