@@ -7,8 +7,10 @@ This repo has two parts:
 
 **Database readiness — 2026-10-01:** Neon dev/staging have 38 matching migration
 records; current Backend dev expects 54. Shared dev seed inconsistencies need
-review, and PR #30/#34 have not merged or executed cloud migration/recovery.
+review, and PR #30/#34 have not merged or executed shared cloud migration.
 See the [dated evidence](neon-db/docs/evidence/database-readiness-2026-10-01.md).
+The [authorized recovery drill](neon-db/docs/evidence/pitr-2026-10-01.md) passed
+on disposable copies using #34's verifier; both drill branches were deleted.
 
 ## Architecture
 

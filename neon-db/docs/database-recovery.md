@@ -1,11 +1,13 @@
 # Recuperación de base de datos (T8)
 
 Este runbook describe cómo inspeccionar y probar una recuperación de Neon sin
-tocar `production`. El 2026-09-28 se ejecutó un ensayo **parcial** de PITR desde
-`dev` con datos sintéticos, conteos y FK; se documenta abajo. La secuencia
-siguiente sigue siendo el procedimiento objetivo con el verificador de Backend
-PR #34, que **no** se ejecutó en aquella rama. El RPO/RTO del servicio en
-producción sigue por definir.
+tocar `production`. El 2026-10-01 se completó un ensayo histórico autorizado
+en una copia desechable de dev, con el verificador de Backend PR #34:
+54 migraciones, 26 tablas Django y 38 checks FK coincidieron, con cero
+huérfanos; los marcadores anterior/posterior demostraron el punto histórico.
+[Evidencia y límites](evidence/pitr-2026-10-01.md). Las ramas se eliminaron y
+dev permaneció en 38 migraciones/24 logs. El ensayo parcial del 2026-09-28
+se conserva como historial abajo. RPO/RTO de producción siguen por definir.
 
 ## Roles y límites
 
@@ -38,7 +40,13 @@ ventana visible.
    configuración heredada antes de clonarla, sin publicar su contenido. Si
    falta esa confirmación, detén el ensayo. Nunca
    uses `production` como origen del ensayo ni como destino de escritura.
-2. En `dev`, coordina una ventana con los tres equipos. El catálogo de
+2. Crea primero una copia de trabajo desechable de dev autorizada para el
+   ensayo. Aplica en esa copia las migraciones del SHA elegido con el rol
+   migrador directo y comprueba `migrate --check`; no migres ni siembres una
+   rama compartida durante el ensayo. No conectes aplicaciones o servicios.
+   Define limpieza para la copia y su futura rama restaurada: Neon no permite
+   hijos de una rama con expiración, por lo que la copia no puede expirar
+   mientras tenga un hijo. El catálogo de
    referencia aprobado pertenece a todos los ambientes; los datos demo
    sintéticos se limitan a Neon `dev` y desarrollo local. Usa el dataset
    aprobado para desarrollo y registra conteos e integridad. Si el dataset de
@@ -48,7 +56,7 @@ ventana visible.
    `DB_RECOVERY_MARKER_HMAC_KEY` (mínimo 32 bytes) desde el gestor de secretos
    y conserva la **misma clave** hasta comparar; no la guardes junto al
    baseline. Ejecuta `db_recovery_verify --write-baseline` con
-   [la guía Backend](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/98eccb72ee49ce1850a9d3b251df5349e74af0bf/docs/database-recovery-verifier.md)
+   [la guía Backend](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/b43555269f629b180e66ac788feb7b4c412854d3/docs/database-recovery-verifier.md)
    antes de T. Coordina la ventana para que no haya otras escrituras entre la
    captura del baseline y T. Conserva el JSON del baseline con acceso
    restringido, fuera del repositorio. No refresques staging desde un dev con
@@ -69,7 +77,7 @@ ventana visible.
    imprime ni se escribe en el runbook.
 
 6. Compara la rama restaurada con el comando suministrado por Backend
-   ([PR34, guía fijada al SHA publicado](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/98eccb72ee49ce1850a9d3b251df5349e74af0bf/docs/database-recovery-verifier.md))
+   ([PR34, guía fijada al SHA publicado](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/b43555269f629b180e66ac788feb7b4c412854d3/docs/database-recovery-verifier.md))
    desde un proceso operador local aislado, usando `--baseline` y los mismos
    IDs y clave HMAC del paso 2. El rol de solo lectura aún no está provisionado;
    la credencial app de la rama autorizada **puede escribir**: úsala solo para
@@ -116,8 +124,15 @@ en `dev` encontró configuración de autenticación activa (OAuth social,
 contraseña/correo y plugin de organización); los webhooks están deshabilitados.
 No se recuperaron secretos ni valores de configuración. Por tanto, no se cumple
 la condición de repetir el clon solo si no hay integraciones activas: el
-verificador en rama PITR queda pausado hasta que el operador apruebe controles
+verificador en rama PITR quedó pausado hasta que el operador aprobara controles
 específicos para una rama desechable o una alternativa segura.
+
+Fernando autorizó expresamente el ensayo del 2026-10-01 tras recibir la
+explicación del clon de auth. Se usaron copias aisladas sin aplicaciones,
+servicios ni login conectados, y se eliminaron después de la comparación.
+[Resultados completos](evidence/pitr-2026-10-01.md). La autorización fue para
+ese ejercicio; no afirma que `neon_auth` haya sido validado ni aprueba futuros
+clones automáticamente.
 
 ## Recuperación de un ambiente real
 
@@ -142,9 +157,9 @@ usar datos reales.
 
 | Evidencia | Estado |
 | --- | --- |
-| Capacidades/retención copiadas de la cuenta | Inventario T1/T6 disponible; reconfirmar al ejecutar |
-| Datos y configuración heredados (`neon_auth` incluido) clasificados y aprobados | Pendiente de operador; conteos agregados no bastan |
-| Rama desechable desde un instante histórico | Ensayo parcial `dev` 2026-09-28; ramas eliminadas; nuevo ensayo con verificador pendiente |
-| Conteos, FK y atribución histórica validados | Conteos y 33 FK públicos en el ensayo parcial; verificador PR34 y atribución histórica completa pendientes |
-| Tiempo y desfase del punto de restauración observados en el ensayo | ~1 s de disponibilidad control-plane y 3 min 32 s entre punto solicitado y `parent_timestamp`; RTO/RPO de incidente no establecidos |
+| Capacidades/retención copiadas de la cuenta | Reconfirmadas 2026-10-01: Free v3, 6 h, 10 ramas |
+| Datos/configuración heredados aprobados para este ensayo | Autorización expresa de Fernando; sin apps/login conectados; auth no verificado por el comando Django |
+| Rama desechable desde un instante histórico | 2026-10-01: copia de dev migrada a 54; restauración a 21:18:13.399622Z; ambas ramas eliminadas |
+| Conteos, FK y atribución histórica validados | Verificador PR34: 26 tablas, 38 checks FK/cero huérfanos, huellas y puntos coincidentes, marcadores correctos |
+| Tiempo y desfase del punto de restauración observados en el ensayo | Menos de 28 min incluyendo preparación; API resolvió timestamp a LSN sin devolver timestamp; no se calcula desfase ni RTO/RPO de incidente |
 | RPO/RTO de producción, operador y reconnect documentados | RPO/RTO TBD; operador/reconnect pendientes |
