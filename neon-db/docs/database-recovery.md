@@ -9,7 +9,9 @@ producción sigue por definir.
 
 ## Roles y límites
 
-- Operador primario: Fernando Ramos (`luci-efe`); suplente pendiente.
+- Operador primario: Fernando Ramos (`luci-efe`); suplente: Ozcar Clemente
+  (`ozcarclemente`), designado por Fernando el 2026-10-01. Su aceptación y
+  acceso operativo a Neon siguen sin verificar.
 - Revisor: Backend verifica conteos, claves foráneas y atribución histórica.
 - Aprobador: responsable del ambiente decide si se puede cambiar tráfico.
 - La restauración de PostgreSQL no recupera identidades de Microsoft Entra ni objetos de

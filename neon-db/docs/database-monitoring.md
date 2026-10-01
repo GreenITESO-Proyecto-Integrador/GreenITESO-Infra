@@ -10,7 +10,7 @@ después de T4/T5 y una ejecución de staging.
 | Función | Responsable | Estado |
 | --- | --- | --- |
 | Operador primario | Fernando Ramos (`luci-efe`) | Confirmado; revisar por sprint |
-| Reemplazo | Pendiente de nombramiento | Pendiente por decisión de Fernando |
+| Reemplazo | Ozcar Clemente (`ozcarclemente`) | Designado por Fernando el 2026-10-01; aceptación y acceso operativo pendientes de verificar |
 | Contexto de errores ORM/API | Backend | Contrato pendiente de integración |
 | Medición warm/cold P95 | Backend + Infra | Pendiente de staging |
 
@@ -58,7 +58,7 @@ tokens, URLs completas, payloads personales ni contenido de fotos.
 | Uso y cuotas | [Inventario y presupuesto T6](neon-cuotas.md) | Base disponible; primera revisión semanal pendiente |
 | Migración fallida visible | ejecución de job en staging sin cambiar tráfico | Pendiente |
 | P95 warm/cold | medición reproducible contra NFR-PERF-01 | Pendiente |
-| Operadores y rutas de escalamiento | Fernando Ramos; suplente pendiente | Parcial |
+| Operadores y rutas de escalamiento | Fernando Ramos; suplente designado Ozcar Clemente (`ozcarclemente`) | Acceso del suplente y rotación por sprint pendientes de verificar |
 
 Hasta completar esas filas, T16 es una preparación documental y no una
 certificación de observabilidad del despliegue.

@@ -312,4 +312,4 @@ WHERE :'owner_needs_migrator_grant' = 't' \gexec
 COMMIT;
 
 \echo 'Role bootstrap committed. No passwords were created or changed.'
-\echo 'Set each role password separately with psql \\password using a reviewed service target.'
+\echo 'Initialize role passwords separately through the reviewed plaintext-over-TLS flow in neon-db/docs/neon-operations.md; never rotate existing credentials during bootstrap.'
