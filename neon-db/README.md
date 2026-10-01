@@ -8,7 +8,7 @@ Documentación operativa de la base de datos (Neon Postgres) del proyecto escola
 - [Runbook de recuperación y prueba — T8](docs/database-recovery.md)
 - [Monitoreo mínimo, cuotas y latencia — T16](docs/database-monitoring.md)
 
-El Backend mantiene el [contrato local de modelos y migraciones](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/main/docs/database-development.md).
+El Backend mantiene el [contrato local de modelos y migraciones](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/dev/docs/database-development.md).
 
 El desarrollo local y CI usan PostgreSQL local; **no requieren cuenta, login ni CLI de Neon**. La versión mayor verificada en Neon es PostgreSQL 18 (referencia para T7).
 

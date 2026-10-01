@@ -27,6 +27,6 @@ variable "github_trigger_enabled" {
 }
 
 variable "trigger_branch" {
-  description = "Scaffold branch mapping (dev, preprod, or main); keep the trigger disabled until migration gating is integrated."
+  description = "Scaffold branch mapping (dev, preprod, or prod); keep the trigger disabled until migration gating is integrated."
   type        = string
 }
