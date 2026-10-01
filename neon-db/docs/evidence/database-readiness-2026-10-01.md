@@ -6,6 +6,11 @@ y ramas `dev`/`staging` explícitos; inventario de migraciones del Backend y API
 de GitHub. No se aplicaron migraciones, se corrigieron datos ni se creó una
 rama PITR durante esta verificación.
 
+Esta fotografía precede el ensayo autorizado ejecutado después el mismo día.
+El [registro PITR posterior](pitr-2026-10-01.md) documenta la restauración y el
+verificador completos en dos ramas desechables ya eliminadas. La fotografía
+anterior se conserva como historial; dev/staging siguen sin migrarse.
+
 ## Esquema compartido frente al código actual
 
 | Destino | Migraciones registradas / esperadas | Evidencia |

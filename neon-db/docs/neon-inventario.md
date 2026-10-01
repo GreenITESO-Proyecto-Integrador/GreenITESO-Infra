@@ -14,6 +14,13 @@ workflow de migración ejecutado. El trabajo GitHub de GCP es scaffold
 verificado; el estado del proveedor y sus recursos actuales son desconocidos.
 Véase [evidencia y límites](evidence/database-readiness-2026-10-01.md).
 
+Después de esa fotografía, Fernando autorizó el ensayo PITR del 2026-10-01.
+Una copia desechable de dev se migró a 54 y se restauró a un punto histórico;
+el verificador PR34 confirmó 26 tablas, 38 checks FK/cero huérfanos, huellas,
+puntos y marcadores correctos. Ambas ramas se eliminaron y dev sigue en
+38 migraciones/24 logs. [Evidencia completa](evidence/pitr-2026-10-01.md).
+Esto no verifica Neon Auth ni la recuperación/failover de producción.
+
 ## Inventario observado
 
 | Campo | Valor verificado |
@@ -29,7 +36,7 @@ Véase [evidencia y límites](evidence/database-readiness-2026-10-01.md).
 | Compute de production | Endpoint y capacidad verificados; identificadores y estado operativo omitidos |
 | Suspensión | API: `suspend_timeout_seconds=0` usa el valor predeterminado del plan; Free suspende tras 5 minutos de inactividad |
 | Retención configurada | `21600` segundos = 6 horas |
-| Backups y restauración | La aceptación requiere verificar retención y completar un ejercicio de restauración; detalles operativos no se reproducen aquí |
+| Backups y restauración | PITR Django verificado en copia desechable 2026-10-01; retención 6 h reconfirmada; producción/auth fuera del ensayo |
 | Ramas usadas / límite Free por proyecto | 3 / 10; no crear ramas por PR |
 
 Fuente: consola y API oficial de Neon, consultadas el 2026-09-24. Este documento omite identificadores de cuenta, proyecto, rama y endpoint. Otros runbooks y evidencia históricos del repositorio/wiki pueden conservarlos; este cambio no los elimina del historial ni es una redacción global.
@@ -90,7 +97,7 @@ aprobado. Neon no recibe automáticamente una rama Git ni un `push` al actual
 
 - Gate GitHub `production`: [desde el 2026-09-29](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/15#issuecomment-5896624014), `prevent_self_review=true`. La API de GitHub revalidada el **2026-10-01** conserva esa regla y solo lista `luci-efe` como reviewer; falta configurar un aprobador independiente. Esta verificación de configuración no prueba un release ni conectividad con production.
 
-**Pendiente humano/externo:** acordar con Product los valores exactos del catálogo institucional y el mapeo canónico de carreras con E2; confirmar acceso y aceptación operativa del suplente designado Ozcar Clemente (`ozcarclemente`); obtener aprobaciones humanas de PR; decidir los controles de clonación de la configuración de autenticación activa antes de otro PITR; crear/proteger `main` en un corte separado; configurar un aprobador independiente de `production`; configurar GCP, IAM y Secret Manager; completar el ensayo con verificador y la aceptación de producción. Los secretos de GitHub `dev`/`preprod` ya están configurados, pero la autenticación desde Actions no está probada; los secretos GCP/production siguen pendientes. No cargar el catálogo DRAFT en staging o production; solo los datos sintéticos explícitamente aprobados pueden vivir en Neon `dev`.
+**Pendiente humano/externo:** acordar con Product los valores exactos del catálogo institucional y el mapeo canónico de carreras con E2; confirmar acceso y aceptación operativa del suplente designado Ozcar Clemente (`ozcarclemente`); obtener aprobaciones humanas de PR; autorizar por separado futuros clones con auth heredada; crear/proteger `main` en un corte separado; configurar un aprobador independiente de `production`; verificar GCP, IAM y Secret Manager y completar la aceptación de producción. El ensayo PITR con verificador ya está evidenciado; no equivale a aceptación de producción. Los secretos de GitHub `dev`/`preprod` ya están configurados, pero la autenticación desde Actions no está probada; los secretos GCP/production siguen pendientes. No cargar el catálogo DRAFT en staging o production; solo los datos sintéticos explícitamente aprobados pueden vivir en Neon `dev`.
 
 ## Instalación reproducible (solo Infra)
 
