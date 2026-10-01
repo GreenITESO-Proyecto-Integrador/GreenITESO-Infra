@@ -107,7 +107,7 @@ Prerequisitos: T3/T4/T5, esquema T9a, datos representativos y despliegue staging
 
 ## Revisión semanal (a formalizar en T16)
 
-Seguimiento asignado en el ticket; suplente pendiente de nombramiento. Rotación por sprint por acordar; no se creó una automatización.
+Seguimiento asignado en el ticket; Fernando designó a Ozcar Clemente (`ozcarclemente`) como suplente Neon el 2026-10-01. Su aceptación y acceso operativo siguen sin verificar. Rotación por sprint por acordar; no se creó una automatización.
 
 - Registrar consumo del periodo, horas-compute, storage, transferencia y número de ramas.
 - Proyectar cierre de mes y comparar con los umbrales, anotando días efectivos de actividad para no extrapolar una semana ociosa como piloto representativo.

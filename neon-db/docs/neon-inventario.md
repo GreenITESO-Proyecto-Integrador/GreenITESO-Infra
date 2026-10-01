@@ -1,6 +1,18 @@
 # T1 — Inventario Neon y tooling de Infra
 
-Inventario inicial: **2026-09-24**, mediante Neon CLI **4.16.0**, Neon metadata/schema-comparison API, GitHub API y `SELECT` solo lectura de `django_migrations` en dev/staging, autenticando como rol app por pooler (`sslmode=require`, `channel_binding=require`). La sección [Estado revalidado](#estado-revalidado--2026-09-29-utc) prevalece sobre las observaciones históricas fechadas. No se abrió conexión SQL a production. Ticket: [Infra #1](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/1).
+Inventario inicial: **2026-09-24**, mediante Neon CLI **4.16.0**, Neon metadata/schema-comparison API, GitHub API y `SELECT` solo lectura de `django_migrations` en dev/staging, autenticando como rol app por pooler (`sslmode=require`, `channel_binding=require`). El [estado actual del 2026-10-01](evidence/database-readiness-2026-10-01.md) prevalece sobre las fotografías históricas fechadas. No se abrió conexión SQL a production en esa verificación. Ticket: [Infra #1](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/1).
+
+## Estado actual — 2026-10-01
+
+Neon dev/staging conservan conjuntos idénticos de **38 migraciones**, mientras
+Backend dev `0efa576` declara **54**: el esquema cloud no está al día con ese
+release. En Neon dev hay 24 logs sintéticos; se observaron cuatro ligados a
+acciones inactivas, cuatro pendientes `NONE` y cuatro pendientes sin evidencia
+(subconjuntos que pueden solaparse). La remediación compartida sigue pendiente.
+PR #30 `d6baa772` y PR #34 `b435552` están publicados y sin fusionar; no hubo
+workflow de migración ejecutado. El trabajo GitHub de GCP es scaffold
+verificado; el estado del proveedor y sus recursos actuales son desconocidos.
+Véase [evidencia y límites](evidence/database-readiness-2026-10-01.md).
 
 ## Inventario observado
 
@@ -8,7 +20,7 @@ Inventario inicial: **2026-09-24**, mediante Neon CLI **4.16.0**, Neon metadata/
 | --- | --- |
 | Proyecto | GreenITESO |
 | Identificadores de proyecto / organización | Omitidos en este inventario; no se garantiza su ausencia en runbooks/evidencia históricos ni en la wiki pública |
-| Cuenta propietaria / responsable | Cuenta gestionada por la organización; suplente **pendiente de nombramiento** |
+| Cuenta propietaria / responsable | Cuenta gestionada por la organización; suplente designado por Fernando el 2026-10-01: Ozcar Clemente (`ozcarclemente`). Acceso operativo y aceptación del suplente no verificados |
 | Base de datos | `neondb` |
 | Roles SQL | Grants least-privilege verificados en las tres ramas (evidencia 2026-09-11); logins positivos y credenciales app cruzadas dev↔staging rechazadas (2026-09-25); producción sin credenciales activas y sin prueba SQL actual |
 | PostgreSQL | **18** |
@@ -76,7 +88,9 @@ aprobado. Neon no recibe automáticamente una rama Git ni un `push` al actual
 - La [clasificación read-only posterior](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/8#issuecomment-5890268021) de `neon_auth.project_config` en `dev` observó un proveedor OAuth social configurado, contraseña/correo habilitados y plugin de organización habilitado; los webhooks están deshabilitados. No se recuperaron valores de credenciales, dominios ni JSON bruto. Es configuración de autenticación activa, no seed sintético: **otro clon PITR queda pausado** hasta decisión expresa del operador sobre controles para una rama desechable o una alternativa segura. No se inspeccionó `staging` ni `production` en esta clasificación.
 - Backend [PR #30](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/pull/30) está listo para revisión al SHA `7398442a5120ec341f5385110d2dd63f7914e376`: 53 pruebas locales de contrato y checks GitHub verdes, con aprobación exacta de Claude Code Sonnet 5.5. Los cuatro secretos necesarios están configurados por separado en los GitHub Environments `dev` y `preprod`, sin valores en el repositorio; conectividad/autenticación desde runner y migración por merge siguen sin verificar. Exige dos aprobaciones humanas en `dev`. [PR #33](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/pull/33) `6ae8c5eff09a975d217ca9b4c0c983d2fa0dbf5f` y [PR #101](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/pull/101) `107c629bd1f751b7aa98857242a25e429db6fe0f` también están listos para revisión, no fusionados. PR #33 separa el seed sintético de `dev` del catálogo institucional aún **no ratificado**; P10 #101 cuenta todos los estados por día local México. [PR #34](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/pull/34) sigue draft, apilado en #30, al SHA `98eccb72ee49ce1850a9d3b251df5349e74af0bf`. GCP no está provisionado; Cloud Run, Secret Manager y medición de latencia desplegada siguen pendientes.
 
-**Pendiente humano/externo:** acordar con Product los valores exactos del catálogo institucional y el mapeo canónico de carreras con E2; nombrar suplente Neon; obtener aprobaciones humanas de PR; decidir los controles de clonación de la configuración de autenticación activa antes de otro PITR; crear/proteger `main` en un corte separado; deshabilitar autoaprobación de `production` y acordar revisión independiente; configurar GCP, IAM y Secret Manager; completar el ensayo con verificador y la aceptación de producción. Los secretos de GitHub `dev`/`preprod` ya están configurados, pero la autenticación desde Actions no está probada; los secretos GCP/production siguen pendientes. No cargar el catálogo DRAFT en staging o production; solo los datos sintéticos explícitamente aprobados pueden vivir en Neon `dev`.
+- Gate GitHub `production`: [desde el 2026-09-29](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/15#issuecomment-5896624014), `prevent_self_review=true`. La API de GitHub revalidada el **2026-10-01** conserva esa regla y solo lista `luci-efe` como reviewer; falta configurar un aprobador independiente. Esta verificación de configuración no prueba un release ni conectividad con production.
+
+**Pendiente humano/externo:** acordar con Product los valores exactos del catálogo institucional y el mapeo canónico de carreras con E2; confirmar acceso y aceptación operativa del suplente designado Ozcar Clemente (`ozcarclemente`); obtener aprobaciones humanas de PR; decidir los controles de clonación de la configuración de autenticación activa antes de otro PITR; crear/proteger `main` en un corte separado; configurar un aprobador independiente de `production`; configurar GCP, IAM y Secret Manager; completar el ensayo con verificador y la aceptación de producción. Los secretos de GitHub `dev`/`preprod` ya están configurados, pero la autenticación desde Actions no está probada; los secretos GCP/production siguen pendientes. No cargar el catálogo DRAFT en staging o production; solo los datos sintéticos explícitamente aprobados pueden vivir en Neon `dev`.
 
 ## Instalación reproducible (solo Infra)
 
@@ -125,9 +139,9 @@ Se verificaron los comandos anteriores y `link`; los comandos de inventario fina
 - [x] CLI fijado, instalado y vinculación online verificada.
 - [x] Inventario técnico de proyecto, ramas, DB, versión, región, uso y políticas GitHub actuales capturados; las diferencias frente al mapeo objetivo están documentadas arriba.
 - [x] Cuenta de proyecto gestionada por la organización.
-- [ ] Suplente nombrado y registrado.
+- [x] Suplente nombrado y registrado: Ozcar Clemente (`ozcarclemente`), designado por Fernando el 2026-10-01. Su aceptación y acceso Neon no se dan por verificados.
 - [x] Exclusiones de secretos preparadas y comprobadas; autenticación fuera del repo.
 - [x] Desarrollo local sin Neon documentado.
 - [x] Inventario publicado en [wiki](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/wiki/Neon-inventario). El usuario hizo público el repositorio para habilitarlo.
 
-T1 permanece abierto por el nombramiento del suplente y la confirmación del proceso operativo de tres equipos.
+El nombramiento del suplente está registrado; la confirmación del proceso operativo de tres equipos y el acceso del suplente siguen pendientes. Este documento no cierra T1 por sí solo.
