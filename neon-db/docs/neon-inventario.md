@@ -49,7 +49,7 @@ Fernando ratificó el **2026-09-10** mantener tres ambientes. El mapeo de tres a
 | --- | --- | --- | --- |
 | Desarrollo | `dev` / `dev` | `dev` | Ramas presentes; `dev` exige PR y dos aprobaciones; el Environment `dev` no tiene protecciones |
 | Preproducción | `preprod` / `preprod` | `staging` | Ramas presentes; desde 2026-09-25 `preprod` exige una aprobación de PR; Environment `preprod` sin protecciones |
-| Producción | `prod` / `production` | `production` | Git `prod` existe y está protegido. Allowlist de Environment alineado a `prod` el 2026-10-01; reviewer y prevención self-review conservados. PR30 se está alineando; no hay release completado. |
+| Producción | `prod` / `production` | `production` | Git `prod` protegido exige `test` y `Enforce promotion chain`. Allowlist de Environment alineado a `prod` el 2026-10-01; reviewer y prevención self-review conservados. PR30 publicado sigue sin fusionarse; no hay release completado. |
 
 **Desarrollo local** significa PostgreSQL en devcontainer, no la rama cloud `dev`.
 
