@@ -5,7 +5,7 @@
 # Persistence: the database is Neon Postgres (external to GCP), reached from
 # Cloud Run via Secret Manager references — see modules/compute and
 # neon-db/docs/neon-operations.md. There is deliberately no Cloud SQL module:
-# Git dev/preprod/main maps to Neon dev/staging/production.
+# Git dev/preprod/prod maps to Neon dev/staging/production.
 #
 # Auth: Microsoft Entra ID is the provider implemented by the Backend. It is
 # external to this Terraform scaffold and is not provisioned here.
@@ -69,9 +69,9 @@ module "cicd" {
   github_repository      = var.github_repository
   github_trigger_enabled = var.github_trigger_enabled
   # var.environment (dev/staging/production) names the Neon branch and this
-  # GCP environment; dev/preprod/main is the target Git mapping. The separate
+  # GCP environment; dev/preprod/prod is the target Git mapping. The separate
   # legacy prod workflow must remain disabled until it has the migration gate.
-  trigger_branch = var.environment == "production" ? "main" : var.environment == "staging" ? "preprod" : "dev"
+  trigger_branch = var.environment == "production" ? "prod" : var.environment == "staging" ? "preprod" : "dev"
 }
 
 module "monitoring" {
