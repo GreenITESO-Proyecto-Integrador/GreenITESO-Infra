@@ -80,12 +80,6 @@ variable "frontend_max_instances" {
   default     = 2
 }
 
-variable "enable_cicd" {
-  description = "Create the Cloud Build/Cloud Deploy scaffold. Keep false: releases go through GitHub Actions with the migration gate."
-  type        = bool
-  default     = false
-}
-
 variable "gcs_bucket_location" {
   description = "Location for the Cloud Storage bucket (object/evidence storage per proposal P1)."
   type        = string
@@ -96,25 +90,6 @@ variable "domain" {
   description = "Public domain served through the load balancer/CDN. Null skips the whole network module and uses the run.app URLs."
   type        = string
   default     = null
-}
-
-variable "github_repository" {
-  description = "owner/repo for the Cloud Build trigger source (e.g. GreenITESO-Proyecto-Integrador/GreenITESO-Backend)."
-  type        = string
-  default     = null
-}
-
-variable "github_trigger_enabled" {
-  description = "Keep false until Cloud Build uses the canonical migration-gated release path."
-  type        = bool
-  default     = false
-  validation {
-    condition = !var.github_trigger_enabled || try(
-      can(regex("^[^/[:space:]]+/[^/[:space:]]+$", var.github_repository)),
-      false,
-    )
-    error_message = "github_repository must be a non-empty owner/repo when github_trigger_enabled is true."
-  }
 }
 
 variable "monitoring_notification_email" {

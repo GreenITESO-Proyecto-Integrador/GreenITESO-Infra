@@ -38,7 +38,6 @@ locals {
       "storage.googleapis.com",
     ],
     var.domain != null ? ["compute.googleapis.com"] : [],
-    var.enable_cicd ? ["cloudbuild.googleapis.com", "clouddeploy.googleapis.com"] : [],
   )
 }
 
@@ -140,25 +139,6 @@ module "network" {
   frontend_service_name = module.frontend.service_name
   backend_service_name  = module.backend.service_name
   domain                = var.domain
-}
-
-# Optional Cloud Build / Cloud Deploy path. Off by default: releases go
-# through the app repos' GitHub Actions, which hold the database migration gate.
-module "cicd" {
-  count  = var.enable_cicd ? 1 : 0
-  source = "./modules/cicd"
-
-  project_id             = var.project_id
-  region                 = var.region
-  app_name               = var.app_name
-  environment            = var.environment
-  github_repository      = var.github_repository
-  github_trigger_enabled = var.github_trigger_enabled
-  # var.environment (dev/staging/production) names the Neon branch and this
-  # GCP environment; the Git branches are dev/preprod/prod.
-  trigger_branch = var.environment == "production" ? "prod" : var.environment == "staging" ? "preprod" : "dev"
-
-  depends_on = [module.platform]
 }
 
 module "monitoring" {

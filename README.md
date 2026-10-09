@@ -3,7 +3,7 @@
 This repo has two parts:
 
 - **[`neon-db/`](neon-db/README.md)** — Neon Postgres operations docs and tooling (inventory, quotas, roles, recovery, monitoring). This is the actual, currently-used database infrastructure. See its own README for the full index.
-- **Terraform (this directory)** — a scaffold for the GCP resources around the app (edge network, Cloud Run, CI/CD, monitoring), matching `GCP Architecture.png`. GitHub verifies the scaffold; current provider resources and deployment state are unknown — see [Status](#status) below.
+- **Terraform (this directory)** — a scaffold for the GCP resources around the app (Cloud Run, optional edge network, storage, monitoring), matching the diagram below. GitHub verifies the scaffold; current provider resources and deployment state are unknown — see [Status](#status) below.
 
 **Database readiness — 2026-10-01:** Neon dev/staging have 38 matching migration
 records; current Backend dev expects 54. Shared dev seed inconsistencies need
@@ -16,14 +16,14 @@ changes, the approved `prod` Git target and demo prerequisites.
 
 ## Architecture
 
-![GCP reference architecture](./GCP%20Architecture.png)
+![Current architecture](./architecture.png)
 
 Summary:
 
 - **Edge** (optional, only when `domain` is set): HTTPS load balancer → Cloud Armor → Cloud CDN, with `/api/*` routed to the backend and everything else to the frontend. Without a domain, users hit the frontend's `run.app` URL and its nginx proxies `/api/` to the backend, so the browser sees one origin (the production Backend has CORS disabled).
 - **Compute target**: two Cloud Run services, backend and frontend; deployed runtime unverified. The backend is pinned to one instance (in-memory notification channel layer).
 - **Persistence**: the diagram shows Cloud SQL, but **the actual database is Neon Postgres** (external to GCP) — see [`neon-db/docs/neon-inventario.md`](neon-db/docs/neon-inventario.md). There is no Cloud SQL module here. Fernando confirmed on 2026-10-01 the Git targets `dev` → Neon `dev`, `preprod` → `staging`, and `prod` → `production`; the final release path is not active yet. The GitHub Environment remains named `production`. The Cloud Storage module targets private object evidence (proposal P1); live bucket state is unverified.
-- **CI/CD & observability**: Backend [PR #30](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/pull/30) is ready for review with green CI, but its migration-gated release path has not run after a protected merge. The four required secrets are configured in each `dev`/`preprod` GitHub Environment; runner authentication is unverified. Cloud Run/Secret Manager require an inventory of existing GCP resources. The Terraform Cloud Build trigger is disabled by default (`github_trigger_enabled = false`) until it invokes the reviewed migration gate. The monitoring scaffold defines a one-minute uptime check; actual monitoring is unverified.
+- **CI/CD & observability**: Backend [PR #30](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/pull/30) is ready for review with green CI, but its migration-gated release path has not run after a protected merge. The four required secrets are configured in each `dev`/`preprod` GitHub Environment; runner authentication is unverified. Cloud Run/Secret Manager require an inventory of existing GCP resources. The monitoring scaffold defines a one-minute uptime check; actual monitoring is unverified.
 - **Third-party**: Microsoft Entra ID was merged into Backend `dev` in PR #93 on 2026-09-22; deployed runtime status is not verified. It is external and not provisioned here.
 
 ## Layout
@@ -40,7 +40,6 @@ modules/
   storage/       # Cloud Storage bucket (private object evidence, P1)
   monitoring/    # Uptime check (1 min) + alert policy
   network/       # ALB + Armor + CDN + path routing  (only if `domain` is set)
-  cicd/          # Cloud Build trigger + Cloud Deploy (only if `enable_cicd`; off)
 ```
 
 Run this once **per environment** (`dev`, `staging`, `production`), each with its own tfvars and state prefix. The environment value matches the Neon branch (`DJANGO_ENV` takes the same value); the Git release branches are `dev`, `preprod`, `prod`.
@@ -69,7 +68,7 @@ the existing account and resources:
 - No remote state backend is configured (`providers.tf` has no `backend` block — create the GCS bucket and add one before the first real apply)
 - Container image/registry/digest: none verified in the inspected GitHub deployment evidence
 - Secret Manager: `modules/platform` creates `greeniteso-<env>-django-secret-key` and `greeniteso-<env>-database-url` (empty); values come from Fernando (Neon URL) and `gcloud`. See [`neon-db/docs/neon-operations.md`](neon-db/docs/neon-operations.md) T4 for the role/URL contract.
-- Existing GCP resources: this configuration assumes a fresh project. If anything (APIs, Cloud Build triggers, Cloud Deploy) was already created by hand, `terraform import` it or run `terraform plan` first, since `enable_cicd = false` would plan to destroy anything previously applied from the `cicd` module.
+- Existing GCP resources: this configuration assumes a fresh project. If anything (APIs, buckets, services) was already created by hand, `terraform import` it or read `terraform plan` carefully first.
 - Domain ownership/DNS: unverified; HTTPS listener/cert resources are conditional on `var.domain`
 
 The recorded scaffold checks passed `terraform fmt -check -recursive` and
