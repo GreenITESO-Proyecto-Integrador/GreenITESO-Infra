@@ -14,8 +14,18 @@ variable "environment" {
   type = string
 }
 
+variable "service_name" {
+  description = "Short service name appended to the resource names (backend, frontend)."
+  type        = string
+}
+
 variable "container_image" {
   type = string
+}
+
+variable "container_port" {
+  type    = number
+  default = 8080
 }
 
 variable "cpu" {
@@ -35,24 +45,25 @@ variable "min_instances" {
 
 variable "max_instances" {
   type    = number
-  default = 4
+  default = 1
 }
 
-variable "db_app_pooled_secret_id" {
-  description = "Secret Manager secret ID holding the Neon app-role pooled connection string (DB_APP_POOLED_URL in neon-db/docs/neon-operations.md). Not created by this module."
-  type        = string
-}
-
-variable "extra_env_secrets" {
-  description = "Additional env var name -> Secret Manager secret ID pairs (e.g. Microsoft Entra ID config, email service credentials)."
+variable "env" {
+  description = "Plain (non-secret) environment variables."
   type        = map(string)
   default     = {}
 }
 
-variable "invoker_member" {
-  description = "IAM member allowed to invoke the Cloud Run service (roles/run.invoker). Defaults to no public access; set to the load balancer's service agent or \"allUsers\" deliberately."
-  type        = string
-  default     = "serviceAccount:PLACEHOLDER-set-to-load-balancer-service-agent"
+variable "secret_env" {
+  description = "Env var name -> Secret Manager secret ID. The runtime service account gets read access to each."
+  type        = map(string)
+  default     = {}
+}
+
+variable "public" {
+  description = "Allow unauthenticated invocation (roles/run.invoker for allUsers)."
+  type        = bool
+  default     = true
 }
 
 variable "labels" {

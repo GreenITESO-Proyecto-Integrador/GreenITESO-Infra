@@ -1,14 +1,57 @@
 # Root wiring for one environment (dev, staging, or production). Run this
-# scaffold once per environment with a different var.environment / tfvars
-# file / state backend — it does not fan out to all three itself.
+# once per environment with its own tfvars and state prefix; it does not fan
+# out to all three itself.
 #
 # Persistence: the database is Neon Postgres (external to GCP), reached from
-# Cloud Run via Secret Manager references — see modules/compute and
-# neon-db/docs/neon-operations.md. There is deliberately no Cloud SQL module:
-# Git dev/preprod/prod maps to Neon dev/staging/production.
+# Cloud Run via a Secret Manager secret holding the pooled app URL. There is
+# deliberately no Cloud SQL. Git dev/preprod/prod maps to Neon dev/staging/
+# production.
 #
-# Auth: Microsoft Entra ID is the provider implemented by the Backend. It is
-# external to this Terraform scaffold and is not provisioned here.
+# Auth: Microsoft Entra ID is implemented by the Backend and is external to
+# this Terraform.
+#
+# Two Cloud Run services (backend, frontend) share one origin from the
+# browser's point of view: the frontend's nginx proxies /api/ to the backend,
+# or the load balancer does the same when a domain is set. Production Backend
+# has CORS disabled, so a shared origin is required.
+
+locals {
+  name_prefix = "${var.app_name}-${var.environment}"
+
+  # Cloud Run's deterministic service hostnames. Computing them here avoids a
+  # dependency cycle (the backend needs its own host in ALLOWED_HOSTS).
+  backend_host  = "${local.name_prefix}-backend-${var.project_number}.${var.region}.run.app"
+  frontend_host = "${local.name_prefix}-frontend-${var.project_number}.${var.region}.run.app"
+
+  secret_ids = {
+    DJANGO_SECRET_KEY = "${local.name_prefix}-django-secret-key"
+    DATABASE_URL      = "${local.name_prefix}-database-url"
+  }
+
+  apis = concat(
+    [
+      "run.googleapis.com",
+      "artifactregistry.googleapis.com",
+      "secretmanager.googleapis.com",
+      "iam.googleapis.com",
+      "monitoring.googleapis.com",
+      "storage.googleapis.com",
+    ],
+    var.domain != null ? ["compute.googleapis.com"] : [],
+    var.enable_cicd ? ["cloudbuild.googleapis.com", "clouddeploy.googleapis.com"] : [],
+  )
+}
+
+module "platform" {
+  source = "./modules/platform"
+
+  project_id = var.project_id
+  region     = var.region
+  app_name   = var.app_name
+  apis       = local.apis
+  secret_ids = values(local.secret_ids)
+  labels     = var.labels
+}
 
 module "storage" {
   source = "./modules/storage"
@@ -18,48 +61,91 @@ module "storage" {
   environment = var.environment
   location    = var.gcs_bucket_location
   labels      = var.labels
+
+  depends_on = [module.platform]
 }
 
-# Service account used only to send transactional email (the "Email Service
-# Account" box in the reference diagram). Whether that's Gmail API, an SMTP
-# relay, or a third-party provider's API key is a decision this scaffold
-# doesn't make — the key/credential itself belongs in Secret Manager, not
-# Terraform state, and isn't created here.
-resource "google_service_account" "email_sender" {
-  project      = var.project_id
-  account_id   = "${var.app_name}-${var.environment}-email"
-  display_name = "${var.app_name} ${var.environment} email sender"
-}
-
-module "compute" {
+module "backend" {
   source = "./modules/compute"
 
-  project_id              = var.project_id
-  region                  = var.region
-  app_name                = var.app_name
-  environment             = var.environment
-  container_image         = var.container_image
-  cpu                     = var.cloud_run_cpu
-  memory                  = var.cloud_run_memory
-  min_instances           = var.cloud_run_min_instances
-  max_instances           = var.cloud_run_max_instances
-  db_app_pooled_secret_id = "DB_APP_POOLED_URL"
-  labels                  = var.labels
+  project_id      = var.project_id
+  region          = var.region
+  app_name        = var.app_name
+  environment     = var.environment
+  service_name    = "backend"
+  container_image = var.backend_image
+  container_port  = 8000
+  cpu             = var.cloud_run_cpu
+  memory          = var.cloud_run_memory
+  min_instances   = var.cloud_run_min_instances
+  # Pinned to 1: notifications use an in-memory channel layer, so a second
+  # instance would silently drop real-time events. See Backend docs/deployment.md.
+  max_instances = 1
+
+  env = merge(
+    {
+      DJANGO_ENV             = var.environment
+      DJANGO_DEPLOYED        = "true"
+      DJANGO_CONNECTION_ROLE = "app"
+      DJANGO_ALLOWED_HOSTS   = join(",", compact([local.backend_host, var.domain]))
+      MICROSOFT_AUTH_MODE    = "entra"
+      MICROSOFT_TENANT_ID    = var.microsoft_tenant_id
+      MICROSOFT_CLIENT_ID    = var.microsoft_client_id
+      WEB_CONCURRENCY        = "1"
+    },
+    var.backend_extra_env,
+  )
+
+  secret_env = local.secret_ids
+  labels     = var.labels
+
+  depends_on = [module.platform]
 }
 
+module "frontend" {
+  source = "./modules/compute"
+
+  project_id      = var.project_id
+  region          = var.region
+  app_name        = var.app_name
+  environment     = var.environment
+  service_name    = "frontend"
+  container_image = var.frontend_image
+  container_port  = 8080
+  cpu             = "1"
+  memory          = "256Mi"
+  min_instances   = var.cloud_run_min_instances
+  max_instances   = var.frontend_max_instances
+
+  # Read by the frontend image's nginx template to proxy /api/ to the backend.
+  env = {
+    BACKEND_URL  = "https://${local.backend_host}"
+    BACKEND_HOST = local.backend_host
+  }
+
+  labels = var.labels
+
+  depends_on = [module.platform]
+}
+
+# Edge layer: only when a domain is set.
 module "network" {
+  count  = var.domain != null ? 1 : 0
   source = "./modules/network"
 
-  project_id             = var.project_id
-  region                 = var.region
-  app_name               = var.app_name
-  environment            = var.environment
-  cloud_run_service_name = module.compute.service_name
-  domain                 = var.domain
-  labels                 = var.labels
+  project_id            = var.project_id
+  region                = var.region
+  app_name              = var.app_name
+  environment           = var.environment
+  frontend_service_name = module.frontend.service_name
+  backend_service_name  = module.backend.service_name
+  domain                = var.domain
 }
 
+# Optional Cloud Build / Cloud Deploy path. Off by default: releases go
+# through the app repos' GitHub Actions, which hold the database migration gate.
 module "cicd" {
+  count  = var.enable_cicd ? 1 : 0
   source = "./modules/cicd"
 
   project_id             = var.project_id
@@ -69,9 +155,10 @@ module "cicd" {
   github_repository      = var.github_repository
   github_trigger_enabled = var.github_trigger_enabled
   # var.environment (dev/staging/production) names the Neon branch and this
-  # GCP environment; dev/preprod/prod is the target Git mapping. The separate
-  # legacy prod workflow must remain disabled until it has the migration gate.
+  # GCP environment; the Git branches are dev/preprod/prod.
   trigger_branch = var.environment == "production" ? "prod" : var.environment == "staging" ? "preprod" : "dev"
+
+  depends_on = [module.platform]
 }
 
 module "monitoring" {
@@ -80,6 +167,8 @@ module "monitoring" {
   project_id         = var.project_id
   app_name           = var.app_name
   environment        = var.environment
-  check_host         = coalesce(var.domain, module.compute.service_url)
+  check_host         = coalesce(var.domain, local.frontend_host)
   notification_email = var.monitoring_notification_email
+
+  depends_on = [module.platform]
 }

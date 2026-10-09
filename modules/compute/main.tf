@@ -1,20 +1,29 @@
-# Cloud Run: the fullstack app container. Database connectivity is Neon
-# Postgres, not Cloud SQL — the app role's pooled URL and the migrator's
-# direct URL are both Secret Manager references, per
-# neon-db/docs/neon-operations.md (T4). This module does not create those
-# secrets; it only wires the service to reference them by name.
+# One Cloud Run service. The root module instantiates it twice (backend and
+# frontend). Secrets are referenced from Secret Manager by ID; this module
+# grants the runtime service account read access but never creates secrets or
+# their values (see modules/platform).
 
 resource "google_service_account" "runtime" {
   project      = var.project_id
-  account_id   = "${var.app_name}-${var.environment}-run"
-  display_name = "${var.app_name} ${var.environment} Cloud Run runtime"
+  account_id   = "${var.app_name}-${var.environment}-${var.service_name}"
+  display_name = "${var.app_name} ${var.environment} ${var.service_name} runtime"
+}
+
+resource "google_secret_manager_secret_iam_member" "runtime_access" {
+  for_each = var.secret_env
+
+  project   = var.project_id
+  secret_id = each.value
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.runtime.email}"
 }
 
 resource "google_cloud_run_v2_service" "app" {
   project  = var.project_id
-  name     = "${var.app_name}-${var.environment}"
+  name     = "${var.app_name}-${var.environment}-${var.service_name}"
   location = var.region
   ingress  = "INGRESS_TRAFFIC_ALL"
+  labels   = var.labels
 
   template {
     service_account = google_service_account.runtime.email
@@ -27,6 +36,10 @@ resource "google_cloud_run_v2_service" "app" {
     containers {
       image = var.container_image
 
+      ports {
+        container_port = var.container_port
+      }
+
       resources {
         limits = {
           cpu    = var.cpu
@@ -34,18 +47,16 @@ resource "google_cloud_run_v2_service" "app" {
         }
       }
 
-      env {
-        name = "DATABASE_URL"
-        value_source {
-          secret_key_ref {
-            secret  = var.db_app_pooled_secret_id
-            version = "latest"
-          }
+      dynamic "env" {
+        for_each = var.env
+        content {
+          name  = env.key
+          value = env.value
         }
       }
 
       dynamic "env" {
-        for_each = var.extra_env_secrets
+        for_each = var.secret_env
         content {
           name = env.key
           value_source {
@@ -59,17 +70,19 @@ resource "google_cloud_run_v2_service" "app" {
     }
   }
 
-  labels = var.labels
+  depends_on = [google_secret_manager_secret_iam_member.runtime_access]
 }
 
-# Traffic reaches Cloud Run via the load balancer/CDN (see modules/network),
-# not directly — but Cloud Run still needs a policy. Least-privilege default:
-# only the load balancer's backend service can invoke it. Loosen explicitly
-# per environment if a direct public Cloud Run URL is ever needed.
+# Users reach the app directly (or through the load balancer when a domain is
+# set), so the service must be invocable by anyone. Authentication happens in
+# the application (Entra ID + JWT), not at the Cloud Run layer. An org policy
+# restricting allUsers will make this fail at apply time.
 resource "google_cloud_run_v2_service_iam_member" "invoker" {
+  count = var.public ? 1 : 0
+
   project  = var.project_id
   location = var.region
   name     = google_cloud_run_v2_service.app.name
   role     = "roles/run.invoker"
-  member   = var.invoker_member
+  member   = "allUsers"
 }

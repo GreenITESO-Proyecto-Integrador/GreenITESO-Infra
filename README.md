@@ -20,31 +20,43 @@ changes, the approved `prod` Git target and demo prerequisites.
 
 Summary:
 
-- **Edge**: HTTPS load balancer → Cloud Armor → Cloud CDN → Cloud Run
-- **Compute target**: Cloud Run for the app container; deployed runtime unverified
+- **Edge** (optional, only when `domain` is set): HTTPS load balancer → Cloud Armor → Cloud CDN, with `/api/*` routed to the backend and everything else to the frontend. Without a domain, users hit the frontend's `run.app` URL and its nginx proxies `/api/` to the backend, so the browser sees one origin (the production Backend has CORS disabled).
+- **Compute target**: two Cloud Run services, backend and frontend; deployed runtime unverified. The backend is pinned to one instance (in-memory notification channel layer).
 - **Persistence**: the diagram shows Cloud SQL, but **the actual database is Neon Postgres** (external to GCP) — see [`neon-db/docs/neon-inventario.md`](neon-db/docs/neon-inventario.md). There is no Cloud SQL module here. Fernando confirmed on 2026-10-01 the Git targets `dev` → Neon `dev`, `preprod` → `staging`, and `prod` → `production`; the final release path is not active yet. The GitHub Environment remains named `production`. The Cloud Storage module targets private object evidence (proposal P1); live bucket state is unverified.
 - **CI/CD & observability**: Backend [PR #30](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/pull/30) is ready for review with green CI, but its migration-gated release path has not run after a protected merge. The four required secrets are configured in each `dev`/`preprod` GitHub Environment; runner authentication is unverified. Cloud Run/Secret Manager require an inventory of existing GCP resources. The Terraform Cloud Build trigger is disabled by default (`github_trigger_enabled = false`) until it invokes the reviewed migration gate. The monitoring scaffold defines a one-minute uptime check; actual monitoring is unverified.
-- **Third-party**: Microsoft Entra ID was merged into Backend `dev` in PR #93 on 2026-09-22; deployed runtime status is not verified. It is external and not provisioned here. An email-sender service account is scaffolded for whatever transactional email provider gets chosen later.
+- **Third-party**: Microsoft Entra ID was merged into Backend `dev` in PR #93 on 2026-09-22; deployed runtime status is not verified. It is external and not provisioned here.
 
 ## Layout
 
 ```
-main.tf                    # wires the modules together for one environment
-variables.tf                # project_id, environment, container_image, etc. — no secrets
+main.tf                    # wires the modules for one environment
+variables.tf                # project_id, project_number, images, Entra client ID, ...
 providers.tf / versions.tf   # google/google-beta provider + version pins
-outputs.tf                   # service URL, LB IP, bucket name, etc.
+outputs.tf                   # frontend/backend URLs, registry, secret IDs, ...
 terraform.tfvars.example     # copy to terraform.tfvars (gitignored) and fill in
 modules/
-  network/       # ALB, Cloud Armor, Cloud CDN, serverless NEG
-  compute/       # Cloud Run service + runtime service account
+  platform/      # enabled APIs, Artifact Registry repo, empty Secret Manager secrets
+  compute/       # one Cloud Run service (instantiated twice: backend, frontend)
   storage/       # Cloud Storage bucket (private object evidence, P1)
-  cicd/          # Cloud Build trigger + Cloud Deploy pipeline/target
   monitoring/    # Uptime check (1 min) + alert policy
+  network/       # ALB + Armor + CDN + path routing  (only if `domain` is set)
+  cicd/          # Cloud Build trigger + Cloud Deploy (only if `enable_cicd`; off)
 ```
 
-Run this scaffold once **per environment** (`dev`, `staging`, `production`), each with its own `terraform.tfvars` and state backend — `main.tf` does not fan out to all three by itself. The environment value matches the Neon branch and Cloud Run service name (`greeniteso-dev`, `greeniteso-staging`, `greeniteso-production`); the approved Git release branches are `dev`, `preprod`, and `prod`. This supersedes the planned `main` cutover described in dated inventory entries. Backend PR30 is published with the reviewed `prod` correction (`33b156e`), still unmerged; the production Environment allowlist now permits `prod`, retaining its reviewer and self-review prevention; protected merges and release acceptance remain pending. The legacy `prod` workflow lacks the canonical migration/digest gate and passes an unsupported environment name; replace it through the reviewed promotion chain before enabling deployment. Organization-level cloud variables remain unverified.
+Run this once **per environment** (`dev`, `staging`, `production`), each with its own tfvars and state prefix. The environment value matches the Neon branch (`DJANGO_ENV` takes the same value); the Git release branches are `dev`, `preprod`, `prod`.
 
-Before applying the CI/CD Terraform change, inspect the plan against the actual GCP state. With the default `github_trigger_enabled = false`, applying this configuration can remove a managed `google_cloudbuild_trigger` from existing state. Changing a previously configured `main` target to `prod` can also affect that trigger. GCP state was not inspected in this audit, so this branch does not prove that no trigger exists. No Terraform apply was run by this audit.
+## Deploying an environment
+
+Prerequisites outside Terraform: a GCS bucket for state (add a `backend "gcs"` block to `providers.tf`), the Neon pooled app URL for that environment from Fernando, the Entra client ID, and Entra owner adding `<frontend_url>/login` as an SPA redirect URI.
+
+1. `terraform apply -target=module.platform` — enables APIs, creates the registry and the empty secrets.
+2. Add secret values (never in tfvars): `python3 -c "import secrets; print(secrets.token_urlsafe(64))" | gcloud secrets versions add greeniteso-<env>-django-secret-key --data-file=-` and the same for `greeniteso-<env>-database-url` (pooled URL, `sslmode=verify-full`).
+3. Build and push `backend` and `frontend` images to the `image_repository` output (`--platform linux/amd64`). Frontend build args: `VITE_API_BASE_URL=<frontend_url>`, `VITE_MICROSOFT_CLIENT_ID`, `VITE_MICROSOFT_AUTHORITY`. Put the image digests in tfvars.
+4. `terraform plan`, review, `terraform apply`.
+5. Run migrations once with the direct (unpooled) Neon URL from a trusted machine: `DJANGO_ENV=<env> DJANGO_DEPLOYED=true DJANGO_CONNECTION_ROLE=direct DATABASE_URL_UNPOOLED=... make -C app migrate-direct` (plus `DJANGO_SECRET_KEY` and `DJANGO_ALLOWED_HOSTS`). The direct URL is deliberately not stored in GCP.
+6. Sign in on `frontend_url` with an `@iteso.mx` account.
+
+The frontend image must serve the SPA on port 8080 with an `index.html` fallback and proxy `/api/` to `$BACKEND_URL`, sending `Host: $BACKEND_HOST` (Cloud Run routes by Host). The Frontend repo has no such Dockerfile yet.
 
 ## Status
 
@@ -54,9 +66,10 @@ current provider resources remain unverified. Before planning changes, verify th
 the existing account and resources:
 
 - No GCP project/configuration was available to verify (`var.project_id` has no default, on purpose)
-- No remote state backend is configured (`providers.tf` has no `backend` block — decide GCS backend + bucket before the first real apply)
+- No remote state backend is configured (`providers.tf` has no `backend` block — create the GCS bucket and add one before the first real apply)
 - Container image/registry/digest: none verified in the inspected GitHub deployment evidence
-- Secret Manager inventory and IAM: unverified (`DB_APP_POOLED_URL` etc. — see [`neon-db/docs/neon-operations.md`](neon-db/docs/neon-operations.md) T4)
+- Secret Manager: `modules/platform` creates `greeniteso-<env>-django-secret-key` and `greeniteso-<env>-database-url` (empty); values come from Fernando (Neon URL) and `gcloud`. See [`neon-db/docs/neon-operations.md`](neon-db/docs/neon-operations.md) T4 for the role/URL contract.
+- Existing GCP resources: this configuration assumes a fresh project. If anything (APIs, Cloud Build triggers, Cloud Deploy) was already created by hand, `terraform import` it or run `terraform plan` first, since `enable_cicd = false` would plan to destroy anything previously applied from the `cicd` module.
 - Domain ownership/DNS: unverified; HTTPS listener/cert resources are conditional on `var.domain`
 
 The recorded scaffold checks passed `terraform fmt -check -recursive` and

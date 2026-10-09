@@ -24,9 +24,36 @@ variable "app_name" {
   default     = "greeniteso"
 }
 
-variable "container_image" {
-  description = "Fully qualified container image for the Cloud Run service. No image is built or pushed by this scaffold."
+variable "project_number" {
+  description = "GCP project number (digits, not the ID). Used to compute Cloud Run's deterministic hostnames."
   type        = string
+}
+
+variable "backend_image" {
+  description = "Backend image, e.g. <region>-docker.pkg.dev/<project>/greeniteso/backend@sha256:... (push after the first targeted apply creates the registry)."
+  type        = string
+}
+
+variable "frontend_image" {
+  description = "Frontend image, same registry as the backend."
+  type        = string
+}
+
+variable "microsoft_client_id" {
+  description = "Entra application (client) ID. Not a secret; the same value goes in the frontend build as VITE_MICROSOFT_CLIENT_ID."
+  type        = string
+}
+
+variable "microsoft_tenant_id" {
+  description = "Entra tenant the Backend validates tokens against (ITESO's tenant, per Backend docs/auth-microsoft-entra.md)."
+  type        = string
+  default     = "6f0348f2-e498-45c9-84f4-c6d81dcffdfe"
+}
+
+variable "backend_extra_env" {
+  description = "Extra plain env vars for the backend (e.g. STAFF_EMAILS)."
+  type        = map(string)
+  default     = {}
 }
 
 variable "cloud_run_cpu" {
@@ -47,10 +74,16 @@ variable "cloud_run_min_instances" {
   default     = 0
 }
 
-variable "cloud_run_max_instances" {
-  description = "Maximum Cloud Run instances."
+variable "frontend_max_instances" {
+  description = "Maximum frontend instances. The backend is fixed at 1 (see main.tf)."
   type        = number
-  default     = 4
+  default     = 2
+}
+
+variable "enable_cicd" {
+  description = "Create the Cloud Build/Cloud Deploy scaffold. Keep false: releases go through GitHub Actions with the migration gate."
+  type        = bool
+  default     = false
 }
 
 variable "gcs_bucket_location" {
@@ -60,7 +93,7 @@ variable "gcs_bucket_location" {
 }
 
 variable "domain" {
-  description = "Public domain served through the load balancer/CDN. Leave null until a domain is owned and DNS is delegated."
+  description = "Public domain served through the load balancer/CDN. Null skips the whole network module and uses the run.app URLs."
   type        = string
   default     = null
 }

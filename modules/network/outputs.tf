@@ -1,9 +1,6 @@
 output "load_balancer_ip" {
-  value = var.domain != null ? google_compute_global_address.app[0].address : null
-}
-
-output "backend_service_id" {
-  value = google_compute_backend_service.app.id
+  description = "Point the domain's DNS A record at this address."
+  value       = google_compute_global_address.app.address
 }
 
 output "security_policy_id" {

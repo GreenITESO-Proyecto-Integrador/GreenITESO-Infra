@@ -1,15 +1,28 @@
-# Edge network layer: external HTTPS load balancer -> Cloud Armor -> Cloud CDN
-# -> Cloud Run (via a serverless NEG). This is the public entry point; Cloud
-# Run itself is only invocable by the load balancer (see modules/compute).
+# Optional edge layer, created only when a domain is set (the root module
+# instantiates it with count). External HTTPS load balancer with Cloud Armor,
+# Cloud CDN on the frontend, and path routing: /api/* goes to the backend
+# service, everything else to the frontend service.
+#
+# Not yet exercised against a real project: validate with `terraform plan`
+# and a real domain before relying on it.
 
-resource "google_compute_region_network_endpoint_group" "cloud_run" {
+locals {
+  services = {
+    frontend = var.frontend_service_name
+    backend  = var.backend_service_name
+  }
+}
+
+resource "google_compute_region_network_endpoint_group" "neg" {
+  for_each = local.services
+
   project               = var.project_id
-  name                  = "${var.app_name}-${var.environment}-neg"
+  name                  = "${var.app_name}-${var.environment}-${each.key}-neg"
   region                = var.region
   network_endpoint_type = "SERVERLESS"
 
   cloud_run {
-    service = var.cloud_run_service_name
+    service = each.value
   }
 }
 
@@ -31,25 +44,31 @@ resource "google_compute_security_policy" "armor" {
   }
 }
 
-resource "google_compute_backend_service" "app" {
+resource "google_compute_backend_service" "svc" {
+  for_each = local.services
+
   project               = var.project_id
-  name                  = "${var.app_name}-${var.environment}-backend"
+  name                  = "${var.app_name}-${var.environment}-${each.key}-backend"
   protocol              = "HTTPS"
-  port_name             = "http"
   load_balancing_scheme = "EXTERNAL_MANAGED"
   security_policy       = google_compute_security_policy.armor.id
 
   backend {
-    group = google_compute_region_network_endpoint_group.cloud_run.id
+    group = google_compute_region_network_endpoint_group.neg[each.key].id
   }
 
-  enable_cdn = true
-  cdn_policy {
-    cache_mode                   = "CACHE_ALL_STATIC"
-    client_ttl                   = 3600
-    default_ttl                  = 3600
-    max_ttl                      = 86400
-    signed_url_cache_max_age_sec = 0
+  # CDN only for the frontend's static assets; API responses are never cached.
+  enable_cdn = each.key == "frontend"
+
+  dynamic "cdn_policy" {
+    for_each = each.key == "frontend" ? [1] : []
+    content {
+      cache_mode                   = "CACHE_ALL_STATIC"
+      client_ttl                   = 3600
+      default_ttl                  = 3600
+      max_ttl                      = 86400
+      signed_url_cache_max_age_sec = 0
+    }
   }
 
   log_config {
@@ -61,11 +80,25 @@ resource "google_compute_backend_service" "app" {
 resource "google_compute_url_map" "app" {
   project         = var.project_id
   name            = "${var.app_name}-${var.environment}-urlmap"
-  default_service = google_compute_backend_service.app.id
+  default_service = google_compute_backend_service.svc["frontend"].id
+
+  host_rule {
+    hosts        = [var.domain]
+    path_matcher = "app"
+  }
+
+  path_matcher {
+    name            = "app"
+    default_service = google_compute_backend_service.svc["frontend"].id
+
+    path_rule {
+      paths   = ["/api", "/api/*"]
+      service = google_compute_backend_service.svc["backend"].id
+    }
+  }
 }
 
 resource "google_compute_managed_ssl_certificate" "app" {
-  count   = var.domain != null ? 1 : 0
   project = var.project_id
   name    = "${var.app_name}-${var.environment}-cert"
 
@@ -75,26 +108,23 @@ resource "google_compute_managed_ssl_certificate" "app" {
 }
 
 resource "google_compute_target_https_proxy" "app" {
-  count            = var.domain != null ? 1 : 0
   project          = var.project_id
   name             = "${var.app_name}-${var.environment}-https-proxy"
   url_map          = google_compute_url_map.app.id
-  ssl_certificates = [google_compute_managed_ssl_certificate.app[0].id]
+  ssl_certificates = [google_compute_managed_ssl_certificate.app.id]
 }
 
 resource "google_compute_global_address" "app" {
-  count   = var.domain != null ? 1 : 0
   project = var.project_id
   name    = "${var.app_name}-${var.environment}-ip"
 }
 
 resource "google_compute_global_forwarding_rule" "https" {
-  count                 = var.domain != null ? 1 : 0
   project               = var.project_id
   name                  = "${var.app_name}-${var.environment}-fr-https"
-  ip_address            = google_compute_global_address.app[0].address
+  ip_address            = google_compute_global_address.app.address
   ip_protocol           = "TCP"
   port_range            = "443"
-  target                = google_compute_target_https_proxy.app[0].id
+  target                = google_compute_target_https_proxy.app.id
   load_balancing_scheme = "EXTERNAL_MANAGED"
 }

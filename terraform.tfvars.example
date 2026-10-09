@@ -1,23 +1,24 @@
-# Copy to terraform.tfvars (gitignored) and fill in once a GCP project
-# is available. No verified project ID or image is configured here — do not
-# invent one.
+# Copy to terraform.tfvars (gitignored). Never put secret values here: the
+# Django secret key and database URL go into Secret Manager (see README).
 
-project_id      = "REPLACE-with-real-gcp-project-id"
-region          = "northamerica-south1"
-environment     = "dev" # dev | staging | production
-app_name        = "greeniteso"
-container_image = "REPLACE-region-docker.pkg.dev/REPLACE-project/REPLACE-repo/greeniteso:latest"
+project_id     = "REPLACE-with-gcp-project-id"
+project_number = "REPLACE-with-gcp-project-number" # gcloud projects describe <id> --format='value(projectNumber)'
+region         = "northamerica-south1"
+environment    = "production" # dev | staging | production
+app_name       = "greeniteso"
 
-# Leave null until a domain is owned and DNS is delegated to this project.
+# Fill in after the first targeted apply creates the registry (see README).
+backend_image  = "northamerica-south1-docker.pkg.dev/REPLACE-project/greeniteso/backend@sha256:REPLACE"
+frontend_image = "northamerica-south1-docker.pkg.dev/REPLACE-project/greeniteso/frontend@sha256:REPLACE"
+
+microsoft_client_id = "REPLACE-with-entra-client-id"
+
+# Null = use the run.app URLs and skip the load balancer entirely.
 domain = null
 
-# Keep null: this Cloud Build/Cloud Deploy scaffold has no migration gate and
-# must not create a second application release path yet.
-github_repository             = null
-github_trigger_enabled        = false
 monitoring_notification_email = null
 
 labels = {
   project = "greeniteso"
-  env     = "dev"
+  env     = "production"
 }
