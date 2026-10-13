@@ -86,11 +86,13 @@ module "backend" {
       DJANGO_ENV             = var.environment
       DJANGO_DEPLOYED        = "true"
       DJANGO_CONNECTION_ROLE = "app"
-      DJANGO_ALLOWED_HOSTS   = join(",", compact([local.backend_host, var.domain]))
-      MICROSOFT_AUTH_MODE    = "entra"
-      MICROSOFT_TENANT_ID    = var.microsoft_tenant_id
-      MICROSOFT_CLIENT_ID    = var.microsoft_client_id
-      WEB_CONCURRENCY        = "1"
+      # The frontend host is needed too: the notifications WebSocket validates
+      # the browser's Origin (the frontend) against ALLOWED_HOSTS.
+      DJANGO_ALLOWED_HOSTS = join(",", compact([local.backend_host, local.frontend_host, var.domain]))
+      MICROSOFT_AUTH_MODE  = "entra"
+      MICROSOFT_TENANT_ID  = var.microsoft_tenant_id
+      MICROSOFT_CLIENT_ID  = var.microsoft_client_id
+      WEB_CONCURRENCY      = "1"
     },
     var.backend_extra_env,
   )
