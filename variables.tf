@@ -63,9 +63,9 @@ variable "cloud_run_cpu" {
 }
 
 variable "cloud_run_memory" {
-  description = "Memory allocation per Cloud Run instance."
+  description = "Backend memory (Django + DRF + Channels). The frontend is fixed at 512Mi in main.tf."
   type        = string
-  default     = "512Mi"
+  default     = "1Gi"
 }
 
 variable "cloud_run_min_instances" {
@@ -104,4 +104,22 @@ variable "labels" {
   default = {
     project = "greeniteso"
   }
+}
+
+variable "enable_release_pipeline" {
+  description = <<-EOT
+    Create the identities for the Backend GitHub release pipeline (Workload
+    Identity Federation, deployer and migration service accounts, and the
+    direct-URL secret). When true, the pipeline owns the Backend image and
+    environment, so Terraform ignores changes to them and `backend_image` is
+    only used for the very first deploy.
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "github_repository" {
+  description = "owner/repo of the Backend whose Actions may release (needed when enable_release_pipeline is true)."
+  type        = string
+  default     = null
 }

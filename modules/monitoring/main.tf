@@ -50,10 +50,17 @@ resource "google_monitoring_alert_policy" "uptime_failure" {
       threshold_value = 1
       duration        = "60s"
 
+      # ALIGN_FRACTION_TRUE yields a 0..1 fraction per check location, so no
+      # cross-series reducer (REDUCE_COUNT_FALSE is only valid for BOOL series).
       aggregations {
-        alignment_period     = "60s"
-        per_series_aligner   = "ALIGN_FRACTION_TRUE"
-        cross_series_reducer = "REDUCE_COUNT_FALSE"
+        alignment_period   = "60s"
+        per_series_aligner = "ALIGN_FRACTION_TRUE"
+      }
+
+      # Alert only when at least two check locations see failures, so one
+      # region's blip doesn't page.
+      trigger {
+        count = 2
       }
     }
   }

@@ -28,6 +28,10 @@ locals {
     DATABASE_URL      = "${local.name_prefix}-database-url"
   }
 
+  # Direct (unpooled) migrator URL: only the release pipeline's migration job
+  # reads it. Created empty here; the value is added by hand, like the others.
+  database_url_unpooled_secret = "${local.name_prefix}-database-url-unpooled"
+
   apis = concat(
     [
       "run.googleapis.com",
@@ -48,7 +52,7 @@ module "platform" {
   region     = var.region
   app_name   = var.app_name
   apis       = local.apis
-  secret_ids = values(local.secret_ids)
+  secret_ids = concat(values(local.secret_ids), var.enable_release_pipeline ? [local.database_url_unpooled_secret] : [])
   labels     = var.labels
 }
 
@@ -93,12 +97,16 @@ module "backend" {
       MICROSOFT_TENANT_ID  = var.microsoft_tenant_id
       MICROSOFT_CLIENT_ID  = var.microsoft_client_id
       WEB_CONCURRENCY      = "1"
+      # Private bucket for action-evidence photos (created by modules/storage).
+      GCS_EVIDENCE_BUCKET = module.storage.bucket_name
     },
     var.backend_extra_env,
   )
 
-  secret_env = local.secret_ids
-  labels     = var.labels
+  secret_env          = local.secret_ids
+  release_managed     = var.enable_release_pipeline
+  bucket_object_admin = { evidence = module.storage.bucket_name }
+  labels              = var.labels
 
   depends_on = [module.platform]
 }
@@ -114,7 +122,7 @@ module "frontend" {
   container_image = var.frontend_image
   container_port  = 8080
   cpu             = "1"
-  memory          = "256Mi"
+  memory          = "512Mi"
   min_instances   = var.cloud_run_min_instances
   max_instances   = var.frontend_max_instances
 
@@ -151,6 +159,25 @@ module "monitoring" {
   environment        = var.environment
   check_host         = coalesce(var.domain, local.frontend_host)
   notification_email = var.monitoring_notification_email
+
+  depends_on = [module.platform]
+}
+
+# GitHub release pipeline identities (optional). The pipeline then builds the
+# image, runs the migration and smoke jobs, and deploys the Backend itself.
+module "release" {
+  count  = var.enable_release_pipeline ? 1 : 0
+  source = "./modules/release"
+
+  project_id                   = var.project_id
+  app_name                     = var.app_name
+  environment                  = var.environment
+  github_repository            = var.github_repository
+  runtime_service_account_name = module.backend.runtime_service_account_name
+  migrator_secret_ids = [
+    module.platform.secret_ids[local.database_url_unpooled_secret],
+    module.platform.secret_ids[local.secret_ids.DJANGO_SECRET_KEY],
+  ]
 
   depends_on = [module.platform]
 }

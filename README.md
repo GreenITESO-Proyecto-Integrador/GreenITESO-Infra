@@ -78,3 +78,37 @@ this validates configuration only. No GCP plan or apply was run by this audit.
 Inventory the existing GCP account/resources before completing this scaffold
 or enabling the app repos' `_deploy.yml` templates; use the canonical migration
 gate rather than activating a second release path.
+
+## Release pipeline (optional)
+
+By default this Terraform deploys the images in your tfvars. The Backend repo
+also has a GitHub release pipeline (`_deploy.yml` + `scripts/release.sh`) that
+builds an image, runs the migration and smoke jobs, then deploys. Setting
+`enable_release_pipeline = true` (and `github_repository`) creates what that
+pipeline needs: a Workload Identity pool restricted to the Backend repo, a
+deployer service account, a separate migration service account, and an empty
+`...-database-url-unpooled` secret. It also makes Terraform stop managing the
+Backend's image and environment (the pipeline owns them); the Frontend is not
+affected.
+
+**Do not just flip the flag on a running environment.** The Backend moves to a
+different Terraform resource, which would plan a destroy and recreate. Move it in
+state first, then plan and check that nothing is destroyed:
+
+```
+terraform state mv 'module.backend.google_cloud_run_v2_service.app' \
+                   'module.backend.google_cloud_run_v2_service.released[0]'
+terraform plan   # expect 0 to destroy
+```
+
+After applying, set these as secrets on the Backend repo's `production` GitHub
+Environment (values from the outputs; none are credentials):
+`GCP_PROJECT_ID`, `GCP_REGION`, `GCP_WORKLOAD_IDENTITY_PROVIDER`,
+`GCP_SERVICE_ACCOUNT`, `MIGRATION_SERVICE_ACCOUNT`, `RUNTIME_SERVICE_ACCOUNT`,
+`ARTIFACT_REGISTRY_LOCATION`, `ARTIFACT_REGISTRY_REPO`, `IMAGE_PROJECT_ID`,
+`CLOUD_RUN_SERVICE`, `MIGRATION_JOB_NAME`, `DJANGO_SECRET_KEY_SECRET`,
+`DATABASE_URL_SECRET`, `DATABASE_URL_UNPOOLED_SECRET`, `DJANGO_ALLOWED_HOSTS`,
+`MICROSOFT_TENANT_ID`, `MICROSOFT_CLIENT_ID`, `CLOUD_RUN_MAX_INSTANCES` (must be
+`1`), `CLOUD_RUN_CONCURRENCY`, and optionally `GCS_EVIDENCE_BUCKET`. Then put the
+direct Neon migrator URL into the `...-database-url-unpooled` secret, and set the
+repository variable `CLOUD_PRODUCTION_DEPLOY_ENABLED=true`.

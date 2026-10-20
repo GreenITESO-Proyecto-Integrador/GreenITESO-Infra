@@ -60,6 +60,18 @@ variable "secret_env" {
   default     = {}
 }
 
+variable "bucket_object_admin" {
+  description = "Label -> bucket name. The runtime service account gets objectAdmin on each bucket."
+  type        = map(string)
+  default     = {}
+}
+
+variable "release_managed" {
+  description = "True when an external release pipeline deploys this service's image and environment; Terraform then ignores them. See main.tf."
+  type        = bool
+  default     = false
+}
+
 variable "public" {
   description = "Allow unauthenticated invocation (roles/run.invoker for allUsers)."
   type        = bool

@@ -34,3 +34,18 @@ output "backend_service_account_email" {
 output "uptime_check_id" {
   value = module.monitoring.uptime_check_id
 }
+
+output "release_workload_identity_provider" {
+  description = "GCP_WORKLOAD_IDENTITY_PROVIDER for the Backend release pipeline (null unless enable_release_pipeline)."
+  value       = one(module.release[*].workload_identity_provider)
+}
+
+output "release_deployer_service_account" {
+  description = "GCP_SERVICE_ACCOUNT for the Backend release pipeline."
+  value       = one(module.release[*].deployer_service_account_email)
+}
+
+output "release_migrator_service_account" {
+  description = "MIGRATION_SERVICE_ACCOUNT for the Backend release pipeline."
+  value       = one(module.release[*].migrator_service_account_email)
+}

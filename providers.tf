@@ -1,6 +1,11 @@
-# No GCP account exists yet for this project. This file intentionally has no
-# backend block (remote state) and no credentials wiring — both are decisions
-# for whoever provisions the real GCP project, not something to assume here.
+# Remote state lives in a GCS bucket created by hand (Terraform can't hold its
+# own state before the bucket exists). Pick the environment at init time:
+#   terraform init -backend-config="prefix=production"
+terraform {
+  backend "gcs" {
+    bucket = "greeniteso-510118-tfstate"
+  }
+}
 
 provider "google" {
   project = var.project_id
