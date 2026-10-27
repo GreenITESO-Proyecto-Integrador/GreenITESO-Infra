@@ -8,10 +8,13 @@ encontró `dev` y `production` en estado `ready`, y `staging` archivada. Neon
 reactiva una rama archivada cuando una conexión o consulta accede a ella. El
 workflow de Backend asigna las promociones a `preprod` a la rama `staging`.
 Cuando `CLOUD_DEPLOYMENT_ENABLED` no es `true`, el job de Neon puede intentar
-migrarla directamente; en la otra ruta, el release de Cloud Run se encarga de
-las migraciones. Ninguna ruta verifica el estado archivado de Neon antes del
-acceso. El valor actual del flag no está verificado. El run exitoso del
-2026-10-20 confirma que ese job ya se ejecutó en `staging`.
+migrarla directamente; si es `true`, el release de Cloud Run ejecuta las
+migraciones sujeto a su verificación de procedencia. Ninguna ruta verifica el
+estado archivado de Neon antes del acceso. La corrida de migración directa en
+`dev` del 2026-10-26 indica que el flag no era `true` en ese momento; el valor
+actual no está verificado. La corrida exitosa del 2026-10-20 confirma que el job
+se ejecutó con `DJANGO_ENV=staging` y el environment `preprod`; no prueba el
+destino Neon más allá de esa configuración.
 Antes de iniciar otra promoción hay que resolver la política operativa de ese
 acceso; el archivo no es una barrera del pipeline. Véase la [evidencia y el
 riesgo](evidence/neon-branch-metadata-2026-10-27.md) y el [inventario Neon](neon-inventario.md).

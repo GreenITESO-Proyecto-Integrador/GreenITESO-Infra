@@ -44,6 +44,8 @@ modules/
 
 Run this once **per environment** (`dev`, `staging`, `production`), each with its own tfvars and state prefix. The environment value matches the Neon branch (`DJANGO_ENV` takes the same value); the Git release branches are `dev`, `preprod`, `prod`.
 
+This is the generic Terraform layout, not confirmation that every environment is ready to provision. As of 2026-10-27, Neon `staging` is archived and may reactivate automatically on access; the Backend promotion workflow can target it. Review the [current status and promotion risk](neon-db/docs/evidence/neon-branch-metadata-2026-10-27.md) and confirm the preproduction access policy before applying or promoting.
+
 ## Deploying an environment
 
 Prerequisites outside Terraform: a GCS bucket for state (add a `backend "gcs"` block to `providers.tf`), the Neon pooled app URL for that environment from Fernando, the Entra client ID, and Entra owner adding `<frontend_url>/login` as an SPA redirect URI.
