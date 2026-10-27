@@ -9,7 +9,8 @@ Este overlay tiene prioridad sobre las skills upstream:
   a preprod, por lo que el estado archivado no bloquea el pipeline. Verifica la
   [evidencia y el riesgo operativo](docs/evidence/neon-branch-metadata-2026-10-27.md)
   antes de promover. Resuelve con el responsable la política para una promoción
-  a `preprod`; no elijas un destino alternativo sin aprobación. No hay ramas
+  a `preprod`; no elijas un destino alternativo sin aprobación. No restaures
+  `staging` ni cambies su destino sin aprobación. No hay ramas
   automáticas por PR ni una base por estudiante.
 - Cada operación CLI que consulte una rama usa --project-id y el destino de
   rama explícitos. No se debe descargar entorno durante onboarding; usa
