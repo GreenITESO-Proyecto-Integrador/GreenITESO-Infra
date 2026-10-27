@@ -3,13 +3,20 @@
 Esta es la guía que siguen los tres equipos para cambiar el esquema sin
 perder datos ni bloquear el trabajo local. El esquema ejecutable vive en las
 migraciones de Django. El mapeo previsto usa los ambientes cloud `dev`,
-`staging` y `production`; una consulta de metadatos de solo lectura del
-2026-10-26 encontró `dev` y `production` en estado `ready`, y `staging`
-archivada, con `updated_at` 2026-10-21. Por ello, hoy no se puede completar el flujo de
-tres ambientes descrito abajo hasta que se defina un destino de preproducción
-activo. Véase el [inventario Neon](neon-inventario.md). La consulta no verificó
-conectividad SQL ni el estado de Cloud Run, y no se creó ni restauró ninguna
-rama.
+`staging` y `production`; la consulta de metadatos de solo lectura más reciente
+encontró `dev` y `production` en estado `ready`, y `staging` archivada. Neon
+reactiva una rama archivada cuando una conexión o consulta accede a ella. El
+workflow de Backend asigna las promociones a `preprod` a la rama `staging`.
+Cuando `CLOUD_DEPLOYMENT_ENABLED` no es `true`, el job de Neon puede intentar
+migrarla directamente; en la otra ruta, el release de Cloud Run se encarga de
+las migraciones. Ninguna ruta verifica el estado archivado de Neon antes del
+acceso. El valor actual del flag no está verificado. El run exitoso del
+2026-10-20 confirma que ese job ya se ejecutó en `staging`.
+Antes de iniciar otra promoción hay que resolver la política operativa de ese
+acceso; el archivo no es una barrera del pipeline. Véase la [evidencia y el
+riesgo](evidence/neon-branch-metadata-2026-10-27.md) y el [inventario Neon](neon-inventario.md).
+La consulta no verificó conectividad de Cloud Run ni la paridad del esquema, y
+no se creó ni restauró ninguna rama.
 
 ```mermaid
 flowchart LR

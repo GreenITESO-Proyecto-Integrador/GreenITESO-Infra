@@ -3,7 +3,8 @@
 T16 usa las vistas y alertas que ya ofrecen Neon y Google Cloud. No agrega
 Prometheus, Grafana, pings de alta frecuencia ni automatización de backups.
 La siguiente lista prepara el checklist; las métricas reales se completan
-después de T4/T5 y una ejecución de staging.
+después de T4/T5 y una ejecución autorizada de staging. Un job de migración
+exitoso no demuestra que Cloud Run esté desplegado ni satisface la medición P95.
 
 ## Responsables
 

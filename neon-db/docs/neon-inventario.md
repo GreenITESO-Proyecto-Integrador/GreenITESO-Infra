@@ -21,21 +21,29 @@ puntos y marcadores correctos. Ambas ramas se eliminaron y dev sigue en
 38 migraciones/24 logs. [Evidencia completa](evidence/pitr-2026-10-01.md).
 Esto no verifica Neon Auth ni la recuperación/failover de producción.
 
-## Ramas Neon revalidadas — 2026-10-26
+## Ramas Neon revalidadas — 2026-10-27
 
-La consulta de metadatos de solo lectura con Neon CLI 4.16.0 del 2026-10-26
-encontró `production` y `dev` en estado `ready`; `staging` aparece en estado
-`archived` y su último `updated_at` registrado es 2026-10-21. La lista de ramas
-confirma su estado en Neon, no la conectividad de la aplicación, el estado de
-Cloud Run ni la paridad del esquema. No se ejecutó SQL ni se restauró o creó
-ninguna rama.
+La consulta de metadatos de solo lectura del 2026-10-27 encontró `production`
+y `dev` en estado `ready`; `staging` aparece en estado `archived`, con
+`updated_at` y `state_changed_at` en 2026-10-21. Estos campos describen el
+estado/metadata de la rama; no establecen cuándo ocurrió la última consulta SQL.
+Neon documenta que una rama archivada se reactiva cuando se accede a ella. La
+consulta confirma el estado de Neon, no la conectividad de la aplicación, el
+estado de Cloud Run ni la paridad del esquema. No se ejecutó SQL ni se restauró
+o creó ninguna rama. Véase la [evidencia redactada](evidence/neon-branch-metadata-2026-10-27.md).
 
-El mapeo acordado de tres ambientes todavía requiere un destino Neon activo
-para preproducción. No operar sobre `staging` mientras siga archivada; cualquier
-destino alternativo o restauración requiere aprobación operativa. La aceptación
-de T5 (smoke de tres ambientes) y las mediciones de T6 que dependen de staging
-requieren una decisión operativa y un destino vigente antes de continuar; véanse
-[Infra #5](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/5)
+El mapeo acordado conserva tres ambientes. El workflow de Backend dirige
+`preprod` a `staging` y puede intentar migrarla cuando se cumple su gate; no
+consulta el estado archivado antes de usar las credenciales del environment.
+El valor actual de `CLOUD_DEPLOYMENT_ENABLED` y la conectividad de la próxima
+ejecución no están verificados. Por eso, el estado `archived` no debe tomarse
+como bloqueo del pipeline: resuelve la política de acceso antes de iniciar otra
+promoción. No elijas un destino alternativo ni restaures una rama sin aprobación
+operativa. La corrida [Backend #20](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/actions/runs/39464327736)
+ya registró migración y smoke del rol app exitosos contra `staging` el 2026-10-20,
+antes del cambio de estado registrado el 2026-10-21. Las mediciones de T6 siguen pendientes y
+requieren validar Cloud Run y P95; un job de migración no prueba despliegue ni
+latencia. Véanse [Infra #5](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/5)
 y [Infra #6](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/6).
 Las secciones fechadas anteriormente conservan su valor como evidencia histórica.
 
@@ -50,7 +58,7 @@ Las secciones fechadas anteriormente conservan su valor como evidencia históric
 | Roles SQL | Grants least-privilege verificados en las tres ramas (evidencia 2026-09-11); logins positivos y credenciales app cruzadas dev↔staging rechazadas (2026-09-25); producción sin credenciales activas y sin prueba SQL actual |
 | PostgreSQL | **18** |
 | Región | `aws-us-east-2` — AWS US East 2 (Ohio) |
-| Ramas | `production` (predeterminada, `ready`), `staging` (`archived`; `updated_at` 2026-10-21), `dev` (`ready`); revalidado 2026-10-26, identificadores omitidos |
+| Ramas | `production` (predeterminada, `ready`), `staging` (`archived`; metadata cambió 2026-10-21), `dev` (`ready`); revalidado 2026-10-27, identificadores omitidos |
 | Compute de production | Endpoint y capacidad verificados; identificadores y estado operativo omitidos |
 | Suspensión | API: `suspend_timeout_seconds=0` usa el valor predeterminado del plan; Free suspende tras 5 minutos de inactividad |
 | Retención configurada | `21600` segundos = 6 horas |
@@ -65,13 +73,13 @@ Fernando ratificó el **2026-09-10** mantener tres ambientes. El mapeo de tres a
 
 | Ambiente | Git / GitHub Environment objetivo | Rama Neon | Estado actual |
 | --- | --- | --- | --- |
-| Desarrollo | `dev` / `dev` | `dev` | Neon `dev` en `ready` (revalidado 2026-10-26); `dev` exige PR y dos aprobaciones; el Environment `dev` no tiene protecciones |
-| Preproducción | `preprod` / `preprod` | `staging` | Neon `staging` aparece archivada en la consulta del 2026-10-26 (`updated_at` 2026-10-21); desde 2026-09-25 `preprod` exige una aprobación de PR; Environment `preprod` sin protecciones. Cloud Run no se verificó en esta consulta. |
-| Producción | `prod` / `production` | `production` | Neon `production` en `ready` (revalidado 2026-10-26). Git `prod` protegido exige `test` y `Enforce promotion chain`. Allowlist de Environment alineado a `prod` el 2026-10-01; reviewer y prevención self-review conservados. PR30 publicado sigue sin fusionarse; no hay release completado. |
+| Desarrollo | `dev` / `dev` | `dev` | Neon `dev` en `ready` (revalidado 2026-10-27); GitHub protection descrita según la revisión anterior, no revalidada en esta consulta |
+| Preproducción | `preprod` / `preprod` | `staging` | Neon `staging` aparece archivada en la consulta del 2026-10-27 (`state_changed_at` y `updated_at` 2026-10-21); el workflow de Backend puede intentar migrarla al correr su gate. El valor actual de `CLOUD_DEPLOYMENT_ENABLED`, protecciones y Cloud Run no se revalidaron en esta consulta. |
+| Producción | `prod` / `production` | `production` | Neon `production` en `ready` (revalidado 2026-10-27). Las protecciones GitHub y el release no se revalidaron en esta consulta. |
 
 **Desarrollo local** significa PostgreSQL en devcontainer, no la rama cloud `dev`.
 
-T3 creó `staging` y `dev` el **2026-09-11** desde `production` sin copiar secretos. No se configuró expiración. El estado de esa creación es histórico: al **2026-10-26**, Neon `staging` aparece archivada. Los previews por PR deben usar PostgreSQL efímero de CI, no ramas Neon.
+T3 creó `staging` y `dev` el **2026-09-11** desde `production` sin copiar secretos. No se configuró expiración. El estado de esa creación es histórico: al **2026-10-27**, Neon `staging` aparece archivada. Los previews por PR deben usar PostgreSQL efímero de CI, no ramas Neon.
 
 Verificación del Backend: la rama predeterminada remota es `dev` (commit
 `7395cf7252543536091301eefde80f2297c3dab0`); también existen Git `preprod` y
@@ -84,8 +92,8 @@ aprobado. Neon no recibe automáticamente una rama Git ni un `push` al actual
 
 - GitHub se revisó el **2026-09-24**: `staging` (legacy) permite la rama Git `staging`, pero no se usa en el mapeo propuesto; el Environment `preprod` no tiene protección propia y `production` exige revisión, solo permite `main` y permite autoaprobación (`prevent_self_review=false`). La consulta de ramas no encontró Git `main`, aunque sí aparecía en el inventario del 2026-09-10. La consulta GraphQL de protecciones mostró solo patrones `dev`, `preprod` y `prod`, no `main`; `dev` requiere PR, dos aprobaciones, code-owner y `test`; `preprod` requiere PR, code-owner y `Enforce promotion chain` + `test`, con cero aprobaciones mínimas; `prod` requiere una aprobación, code-owner y `Enforce promotion chain`. La rama `prod` no equivale al Environment `production`. Cuándo y por qué dejó de aparecer `main` no está verificado; reconciliarlo antes del corte. No se cambiaron reglas ni se publican aquí secretos. El workflow legado `deploy-prod` sigue en la rama `prod` y se condiciona a `CLOUD_DEPLOYMENT_ENABLED=true`; no se encontró esa variable en el repositorio ni en sus Environments, pero no se pudieron inspeccionar variables de organización. Tratar la ruta como potencialmente activatable y deshabilitar/controlar explícitamente antes del corte. No se encontró configuración GCP; Cloud Run y Secret Manager siguen pendientes.
 - Al revisar el PR draft [#30](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/pull/30) en el SHA histórico `a6fe6361d408f191b98a7a37f3a406d92dee4cd4`, se observó la propuesta de un job de migración dev/preprod después del test exitoso del SHA exacto de una PR fusionada; un PR cerrado sin fusionar no recibía credenciales DB. Revalidaba la punta del destino y serializaba por ambiente. CI de PR usaba PostgreSQL local sin secretos Neon. El check `Enforce promotion chain` exigía origen en este repositorio y validaba `dev`→`preprod`→`main`. Su ruta production separada exigía merge preprod→`main`, `CLOUD_DEPLOYMENT_ENABLED=true` y el job de migración de Cloud Run antes del release. En esa revisión histórica, la suite de contrato fue **35/35** y el ensayo de conflicto en PostgreSQL 18 desechable pasó; no sustituyen la verificación del head posterior. El head remoto observado el 2026-09-25 antes de la actualización local fue `c4ec42467cba7f0a3393f93b944cd114fec179b4`, todavía draft, sin el smoke ampliado local. No hay secretos Neon a nivel repository/environment en la inspección disponible, y el alcance org-level no se pudo inspeccionar. Los trabajos Cloud Run/Secret Manager dependen de GCP.
-- Precisión sobre PR #30: el job de migración directa dev/preprod funciona solo mientras `CLOUD_DEPLOYMENT_ENABLED` **no** sea `true`; al habilitar Cloud Run, la migración se mueve al job de release. El release dev escucha todo `push` a `dev`, por lo que la garantía de merge depende también de la protección efectiva de esa rama. Según [GitHub Actions](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows), el evento `pull_request: closed` de una PR fusionada usa el ref de la rama destino (`main` en production); esto hace compatible en principio el filtro `main` del Environment, pero requiere ensayo del workflow antes del corte. Las fechas de checks del 2026-09-25 en estos bullets están en UTC; las inspecciones del 2026-09-24 se registraron en hora local de México.
-- Head actualizado de PR #30 el **2026-09-25**: `8c7da3b4f22b0e14751ddee503ffe7f4b1ccd063`. Añade smoke de grants y existencia de tablas gestionadas, evidencia de migración+smoke dev antes de promoción a staging tanto en modo Neon directo como en el futuro modo Cloud Run, y pruebas de contrato incorporadas a CI. PostgreSQL local: **215 tests**; contrato de release: **49 tests**. Sigue siendo draft; los workflows no se activan en `dev` hasta que se fusione por el proceso normal, y no hubo migración Neon por este push.
+- Precisión sobre PR #30: el job de migración directa dev/preprod funciona solo mientras `CLOUD_DEPLOYMENT_ENABLED` **no** sea `true`; al habilitar Cloud Run, la migración se mueve al job de release. El valor vigente de esa variable no se verificó. El workflow de migraciones mapea `preprod` a `staging` sin una comprobación visible del estado de la rama Neon. El PR #30 se fusionó en Backend `dev` el **2026-10-09**; esto no acredita un release de Cloud Run. La corrida [#20](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/actions/runs/39464327736) migró y verificó acceso app en `staging` el **2026-10-20**, antes de que Neon registrara el cambio a `archived` el 2026-10-21. Revisa la [nota de riesgo y estado actual](evidence/neon-branch-metadata-2026-10-27.md) antes de otra promoción.
+- Head actualizado de PR #30 el **2026-09-25**: `8c7da3b4f22b0e14751ddee503ffe7f4b1ccd063`. Añadió smoke de grants y existencia de tablas gestionadas, evidencia de migración+smoke dev antes de promoción a staging tanto en modo Neon directo como en el futuro modo Cloud Run, y pruebas de contrato incorporadas a CI. PostgreSQL local: **215 tests**; contrato de release: **49 tests**. En esa fecha seguía como draft; no hubo migración Neon por ese push. El PR se fusionó después, el 2026-10-09 (véase el estado vigente arriba).
 - El catálogo de referencia aprobado se comparte entre todos los ambientes. Los datos demo sintéticos se limitan a Neon `dev` y desarrollo local; no sembrar ni refrescar staging desde un dev sembrado. El PR draft [#33](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/pull/33) (`63766725e88dc230d5ab3b668012ce1d512675fa`) propone un seed manual, transaccional y limitado a Neon `dev`, con rol app, TLS y hash del catálogo aprobado. Sus guardas cubren TLS, identidad, conteos de puntos y colisiones de catálogo. PostgreSQL 18: **262 tests pasaron localmente** y sus checks de GitHub pasaban al **2026-09-24**. Esas son comprobaciones del PR, no evidencia de seed ejecutado en Neon.
 - Actualización del draft PR #33 el **2026-09-25**, head `1022a2da00c863e6cf4b7262d595339192236ee9`: agregó comando de liberación **solo de catálogo** con fixture `APPROVED` ausente hasta signoff de Product, pin SHA-256 por ambiente y guardas de rol/host/TLS; el seed demo sigue separado. Suite PostgreSQL 18 local **270/270** y checks de GitHub del head pasaron. La [propuesta de valores](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/blob/1022a2da00c863e6cf4b7262d595339192236ee9/docs/catalog-proposal.md) no es una fixture aprobada. No se ejecutó el comando en Neon.
 - El PR draft [#34](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/pull/34) (`02d7ffc1bd8b21f938b9461750941d3f73a863df`) contiene el verificador de recuperación: inventaría todas las tablas de modelos Django gestionados, incluidas `feed`, `notifications` y las relaciones M2M autocreadas; comprueba conteos, huellas de contenido, migraciones y referencias FK/OneToOne. El formato de baseline 4 usa HMAC para identificadores de marcadores y clanes; su base actual es la rama del PR #30, `feat/database-release-workflow`. La suite enfocada de PostgreSQL 18 pasó **24/24** y los checks Django, Ruff, Pylint y título de GitHub pasaban al **2026-09-25**. Las pruebas en PostgreSQL local desechable no equivalen a un ejercicio PITR: no se creó una rama Neon ni se escribió en Neon.
