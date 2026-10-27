@@ -40,9 +40,11 @@ La corrida de migración directa en `dev` el 2026-10-26 indica que el flag no er
 no están verificados. Por eso, el estado `archived` no debe tomarse
 como bloqueo del pipeline: resuelve la política de acceso antes de iniciar otra
 promoción. No elijas un destino alternativo ni restaures una rama sin aprobación
-operativa. La corrida [Backend #20](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/actions/runs/39464327736)
-ya registró migración y smoke del rol app exitosos contra `staging` el 2026-10-20,
-antes del cambio de estado registrado el 2026-10-21. Las mediciones de T6 siguen
+operativa. La corrida [#20 del workflow Neon database migrations](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Backend/actions/runs/39464327736)
+registró el 2026-10-20 una migración y un smoke del rol app exitosos contra la
+base configurada en `preprod` con `DJANGO_ENV=staging`; las URLs estaban
+enmascaradas, así que no se afirma una conexión directa verificada a una rama
+concreta. Fue antes del cambio de estado registrado el 2026-10-21. Las mediciones de T6 siguen
 pendientes y requieren validar Cloud Run y P95; un job de migración no prueba despliegue ni
 latencia. Véanse [Infra #5](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/5)
 y [Infra #6](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/issues/6).
