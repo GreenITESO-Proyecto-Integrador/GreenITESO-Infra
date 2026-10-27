@@ -12,6 +12,6 @@ El Backend mantiene el [contrato local de modelos y migraciones](https://github.
 
 El desarrollo local y CI usan PostgreSQL local; **no requieren cuenta, login ni CLI de Neon**. La versión mayor verificada en Neon es PostgreSQL 18 (referencia para T7).
 
-La arquitectura acordada usa **tres ambientes: dev, staging y production**, con una rama Neon por ambiente. Verifica el mapeo de Cloud Run, ramas y secretos en el [inventario](docs/neon-inventario.md) antes de operar.
+La arquitectura acordada tiene **tres ambientes objetivo: dev, staging y production**, con una rama Neon por ambiente. La revalidación de metadatos del 2026-10-26 encontró `staging` archivada; no la uses ni la restaures hasta contar con un destino activo y aprobado. Verifica el estado y el mapeo de Cloud Run, ramas y secretos en el [inventario](docs/neon-inventario.md) antes de operar.
 
 El usuario hizo público el repositorio el 2026-09-10 para habilitar el [wiki de Infra](https://github.com/GreenITESO-Proyecto-Integrador/GreenITESO-Infra/wiki). Las páginas se mantienen también en `docs/` para revisión por PR; al actualizarlas, sincronizar sus versiones en el wiki. No publicar credenciales en ninguno de los dos lugares.

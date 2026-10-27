@@ -2,8 +2,14 @@
 
 Esta es la guía que siguen los tres equipos para cambiar el esquema sin
 perder datos ni bloquear el trabajo local. El esquema ejecutable vive en las
-migraciones de Django. Neon solo hospeda los tres ambientes cloud: `dev`,
-`staging` y `production`.
+migraciones de Django. El mapeo previsto usa los ambientes cloud `dev`,
+`staging` y `production`; una consulta de metadatos de solo lectura del
+2026-10-26 encontró `dev` y `production` en estado `ready`, y `staging`
+archivada, con `updated_at` 2026-10-21. Por ello, hoy no se puede completar el flujo de
+tres ambientes descrito abajo hasta que se defina un destino de preproducción
+activo. Véase el [inventario Neon](neon-inventario.md). La consulta no verificó
+conectividad SQL ni el estado de Cloud Run, y no se creó ni restauró ninguna
+rama.
 
 ```mermaid
 flowchart LR

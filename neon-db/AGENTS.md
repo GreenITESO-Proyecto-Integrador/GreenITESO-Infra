@@ -3,8 +3,10 @@
 Este overlay tiene prioridad sobre las skills upstream:
 
 - El desarrollo local y CI usan PostgreSQL 18 sin cuenta, login o CLI de Neon.
-- Neon tiene solo tres ramas cloud: dev, staging y production. No hay ramas
-  automáticas por PR ni una base por estudiante.
+- El mapeo objetivo usa tres ramas cloud: dev, staging y production. La consulta
+  de metadatos del 2026-10-26 encontró staging archivada; no operar sobre ella
+  mientras siga así ni elegir un destino alternativo/restauración sin aprobación
+  operativa. No hay ramas automáticas por PR ni una base por estudiante.
 - Cada operación CLI que consulte una rama usa --project-id y el destino de
   rama explícitos. No se debe descargar entorno durante onboarding; usa
   --no-env-pull cuando la versión instalada lo soporte.

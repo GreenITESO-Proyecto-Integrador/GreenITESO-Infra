@@ -6,6 +6,12 @@ contraseñas, tokens ni valores de GCP. Las operaciones que cambian Neon deben
 ejecutarse con el proyecto y la rama explícitos, por el responsable de Infra,
 después de revisar el destino.
 
+El mapa siguiente es el diseño previsto, no evidencia de que cada ambiente esté
+disponible hoy. Una consulta de metadatos de solo lectura del 2026-10-26 encontró
+`staging` archivada. No ejecutar operaciones sobre esa rama ni restaurarla hasta
+que exista una decisión operativa y un destino activo aprobado. Consulta el
+[inventario actual](neon-inventario.md) antes de seguir pasos de este runbook.
+
 ## Mapa de ambientes
 
 | Ambiente | Cloud Run previsto | Rama Neon | Branch ID | Endpoint ID | Rol app | Rol migrator |
