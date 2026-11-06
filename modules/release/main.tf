@@ -8,6 +8,10 @@
 # deployer needs those roles and must be allowed to act as the two runtime
 # identities.
 
+locals {
+  trusted_repositories = concat([var.github_repository], var.extra_github_repositories)
+}
+
 resource "google_service_account" "deployer" {
   project      = var.project_id
   account_id   = "${var.app_name}-${var.environment}-deployer"
@@ -38,22 +42,28 @@ resource "google_iam_workload_identity_pool_provider" "github" {
     "google.subject"        = "assertion.sub"
     "attribute.repository"  = "assertion.repository"
     "attribute.environment" = "assertion.environment"
+    # repository + environment in one attribute, so a service account can be
+    # bound to "this repo, in this environment" and not to the environment name
+    # alone (which any repository in the pool could also claim).
+    "attribute.repo_env" = "assertion.repository + \"/\" + assertion.environment"
   }
 
-  # Only tokens minted for this repository are accepted at all.
-  attribute_condition = "assertion.repository == \"${var.github_repository}\""
+  # Only tokens minted for these repositories are accepted at all. Each repo is
+  # then bound to its own service account below.
+  attribute_condition = "assertion.repository in [${join(", ", [for r in local.trusted_repositories : "\"${r}\""])}]"
 
   oidc {
     issuer_uri = "https://token.actions.githubusercontent.com"
   }
 }
 
-# Only jobs running in the GitHub Environment named below (which carries the
-# required reviewer and branch rules) may impersonate the deployer.
+# Only jobs of THIS repository running in the GitHub Environment named below may
+# impersonate the deployer. Binding by environment name alone would let any other
+# trusted repository in the pool claim the same environment and reuse it.
 resource "google_service_account_iam_member" "github_impersonates_deployer" {
   service_account_id = google_service_account.deployer.name
   role               = "roles/iam.workloadIdentityUser"
-  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.environment/${var.github_environment}"
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.repo_env/${var.github_repository}/${var.github_environment}"
 }
 
 locals {

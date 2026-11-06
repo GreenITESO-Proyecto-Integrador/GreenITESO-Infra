@@ -15,6 +15,12 @@ variable "github_repository" {
   type        = string
 }
 
+variable "extra_github_repositories" {
+  description = "Other repositories whose tokens the pool accepts (each needs its own service account binding elsewhere, e.g. modules/release-frontend)."
+  type        = list(string)
+  default     = []
+}
+
 variable "github_environment" {
   description = "GitHub Environment allowed to impersonate the deployer (carries the reviewers)."
   type        = string

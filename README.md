@@ -112,3 +112,38 @@ Environment (values from the outputs; none are credentials):
 `1`), `CLOUD_RUN_CONCURRENCY`, and optionally `GCS_EVIDENCE_BUCKET`. Then put the
 direct Neon migrator URL into the `...-database-url-unpooled` secret, and set the
 repository variable `CLOUD_PRODUCTION_DEPLOY_ENABLED=true`.
+
+## Frontend release pipeline (optional)
+
+The Frontend repo can also release itself: on a push to `prod` it builds the image
+in GitHub Actions, deploys it to Cloud Run as a no-traffic candidate, health-checks
+it, and only then shifts traffic. `enable_frontend_release_pipeline = true`
+(requires `enable_release_pipeline`) creates what it needs:
+
+- the Frontend repo is trusted by the shared Workload Identity pool;
+- a **separate, narrower** deployer account (`<app>-<env4>-fe-deployer`). It may
+  only update the Frontend service, push to the Artifact Registry repo, and act as
+  the Frontend's own runtime account. It cannot touch the Backend, the database
+  or any secret;
+- each repo is bound to **its own** account by `repository/environment`. (An
+  earlier version bound the Backend deployer by environment name alone, which any
+  repo in the pool could also claim, so enabling the Frontend would have let it
+  act as the Backend deployer. Applying this tightens that binding.)
+
+Terraform stops managing the Frontend's image and env vars (the pipeline sets
+`BACKEND_URL`/`BACKEND_HOST` on every deploy). Enabling this on the live service
+needs one state move first, or the Frontend plans a destroy and recreate:
+
+```
+terraform state mv 'module.frontend.google_cloud_run_v2_service.app[0]' \
+                   'module.frontend.google_cloud_run_v2_service.released[0]'
+terraform plan   # expect 0 to destroy the Frontend
+```
+
+Then set these as secrets on the Frontend repo's `production` GitHub Environment:
+`GCP_PROJECT_ID`, `GCP_REGION`, `GCP_WORKLOAD_IDENTITY_PROVIDER` (same value as the
+Backend), `GCP_SERVICE_ACCOUNT` (output `release_frontend_deployer_service_account`),
+`ARTIFACT_REGISTRY_LOCATION`, `ARTIFACT_REGISTRY_REPO`, `CLOUD_RUN_SERVICE`,
+`BACKEND_URL`, `VITE_API_BASE_URL`, `VITE_MICROSOFT_CLIENT_ID`,
+`VITE_MICROSOFT_AUTHORITY`; and the repo variable
+`CLOUD_PRODUCTION_DEPLOY_ENABLED=true`.

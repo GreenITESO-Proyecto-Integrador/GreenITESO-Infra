@@ -132,6 +132,10 @@ module "frontend" {
     BACKEND_HOST = local.backend_host
   }
 
+  # When the Frontend release pipeline is on, it owns the image and these env
+  # vars (it sets them on every deploy), so Terraform stops managing them.
+  release_managed = var.enable_frontend_release_pipeline
+
   labels = var.labels
 
   depends_on = [module.platform]
@@ -173,11 +177,30 @@ module "release" {
   app_name                     = var.app_name
   environment                  = var.environment
   github_repository            = var.github_repository
+  extra_github_repositories    = var.enable_frontend_release_pipeline ? [var.frontend_github_repository] : []
   runtime_service_account_name = module.backend.runtime_service_account_name
   migrator_secret_ids = [
     module.platform.secret_ids[local.database_url_unpooled_secret],
     module.platform.secret_ids[local.secret_ids.DJANGO_SECRET_KEY],
   ]
+
+  depends_on = [module.platform]
+}
+
+# Frontend GitHub release pipeline identity (optional, needs the pool above).
+module "release_frontend" {
+  count  = var.enable_frontend_release_pipeline ? 1 : 0
+  source = "./modules/release-frontend"
+
+  project_id                   = var.project_id
+  region                       = var.region
+  app_name                     = var.app_name
+  environment                  = var.environment
+  github_repository            = var.frontend_github_repository
+  workload_identity_pool_name  = module.release[0].workload_identity_pool_name
+  service_name                 = module.frontend.service_name
+  runtime_service_account_name = module.frontend.runtime_service_account_name
+  artifact_repository_id       = var.app_name
 
   depends_on = [module.platform]
 }

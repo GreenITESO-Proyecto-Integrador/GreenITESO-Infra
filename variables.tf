@@ -123,3 +123,27 @@ variable "github_repository" {
   type        = string
   default     = null
 }
+
+variable "enable_frontend_release_pipeline" {
+  description = <<-EOT
+    Create the identity for the Frontend GitHub release pipeline and let the
+    Frontend repo log in through the shared Workload Identity pool. Requires
+    enable_release_pipeline (the pool lives there). When true, the pipeline owns
+    the Frontend's image and environment, so Terraform ignores them. Enabling it
+    on a live service needs a one-time `terraform state mv` first (see README),
+    or the Frontend plans a destroy and recreate.
+  EOT
+  type        = bool
+  default     = false
+
+  validation {
+    condition     = !var.enable_frontend_release_pipeline || var.enable_release_pipeline
+    error_message = "enable_frontend_release_pipeline requires enable_release_pipeline = true (the Workload Identity pool is created there)."
+  }
+}
+
+variable "frontend_github_repository" {
+  description = "owner/repo of the Frontend whose Actions may release."
+  type        = string
+  default     = "GreenITESO-Proyecto-Integrador/GreenITESO-Frontend"
+}

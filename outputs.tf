@@ -49,3 +49,8 @@ output "release_migrator_service_account" {
   description = "MIGRATION_SERVICE_ACCOUNT for the Backend release pipeline."
   value       = one(module.release[*].migrator_service_account_email)
 }
+
+output "release_frontend_deployer_service_account" {
+  description = "GCP_SERVICE_ACCOUNT for the Frontend release pipeline (null unless enable_frontend_release_pipeline)."
+  value       = one(module.release_frontend[*].deployer_service_account_email)
+}
